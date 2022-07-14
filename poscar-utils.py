@@ -24,7 +24,7 @@ class poscar_modify:
     self.verbose = verbose
 
   def write(self, filename, cartesian=False, xyz=False):
-    """It just invokes the write method from the poscar. Put here just
+    """It just invokes the write method from the poscar. Is here just
     for convenience
 
     filename: the name of the file to be written
@@ -130,9 +130,7 @@ class poscar_modify:
       self.p.remove(atoms)
 
   def add(self, element, position, cartesian=True):
-    """Removes a list of atoms from the Poscar object. The order of
-    remotion is not trivial, but the method (at the Poscar-class
-    level) sort it before removing the atoms.
+    """Adds a single atom to the Poscar object.
     
     args:
     
@@ -210,7 +208,122 @@ class poscar_modify:
 
   
 
+class poscar_supercell:
+  """ class to generate a supercell 
+  """
+  
+  def __init__(self, poscar, verbose=False):
+    self.poscar = poscar
+    self.verbose = verbose
 
+  def supercell(self, size):
+    """ 
+    Creates a new poscar object with size:
+
+    size = [[b1x, b1y, b1z],
+            [b2x, b2y, b2z],
+            [b3x, b3y, b3z]]
+    """
+    lat = self.poscar.lat
+    pos = self.poscar.dpos
+    elem = self.poscar.elm
+    scell = np.array(size, dtype=int)
+  
+    if self.verbose:
+      print("original lattice:\n", lat, "\n")
+      print("New lattice (in terms of the original vectors)\n", scell, "\n")
+      print("Cartesian coordinates new lattice:\n", np.dot(scell, lat))
+
+    # inverse: a=ocell*b
+    ocell = np.linalg.inv(scell)
+    if self.verbose:
+      print( "inverse transformation:\n", ocell)
+      print( "atoms, direct\n", pos)
+      print( "atoms in cart\n")
+      print(  np.einsum('ij,jk', pos, lat))
+
+      print( "in terms of new lattice\n")
+    spos = np.einsum('ij,jk', pos, ocell)
+
+    # I need to find the values of n_i, a_i *inside* the supercell.
+    # n_i*a_i = n_i*ocell_ij*b_j
+    # then, the condition is : 0 < n_i*ocell_ij < 1
+    b = np.ones(3)
+    n = np.einsum('j,ji', b, scell )
+    n = int(np.max(np.abs(n)))
+    if self.verbose:
+      print( "maximum value of n to search for repetitions : ", n)
+
+    n = np.arange(-n,n)
+
+    n = np.array([(x,y,z) for z in n for y in n for x in n])
+    nuseful = []
+    #checking which of the previous repetitions works
+    for trial in n:
+      value = np.einsum('i,ij', trial, ocell)
+      if value.min() >= 0 and value.max() < 1:
+        nuseful.append(trial)
+      
+    if self.verbose:
+      print( "set of new coords\n", nuseful)
+    npos = []
+    for nn in nuseful:
+      npos.append(spos + np.einsum('i,ij', nn, ocell))
+    
+    if self.verbose:
+      print( "positions:")
+    npos = np.concatenate(npos)
+    npos = np.mod(npos, 1)
+    if self.verbose:
+      print( npos, npos.shape)
+
+    # I can have repeated elements, such as '0 0 1', and '0 0 0'
+    # (the 1 can be 0.9999999 and fail the previous filter)
+    tol = 0.001
+    temp = []
+    for i in range(len(npos)):
+      repeated = False
+      for j in range(i):
+        d = np.abs(npos[i] - npos[j])
+        for k in range(len(d)):
+          if abs(d[k]-1) < d[k]:
+            d[k]=d[k]-1
+        #print d
+        if np.linalg.norm(d) < tol and i != j:
+          repeated = True
+          if self.verbose:
+            print( i, j, npos[i], npos[j])
+      if not repeated:
+        temp.append(npos[i])
+      
+    temp = np.concatenate(temp)
+    temp.shape = (-1,3)
+    if self.verbose:
+      print( temp.shape)
+    npos = temp[:]
+    
+    elem = elem*len(nuseful)
+    #print elem
+    self.poscar.elm = elem
+    self.poscar.lat = np.dot(scell, lat)
+    self.poscar.dpos = npos
+    self.poscar._set_cartesian()
+  
+    self.poscar.sort()
+
+    return self.poscar
+
+  def write(self, filename, cartesian=False, xyz=False):
+    """Just a convenience method 
+
+    """
+    pm = poscar_modify(self.poscar, verbose=self.verbose)
+    pm.write(filename=filename, cartesian=cartesian, xyz=xyz)
+  
+    return
+
+  
+  
   
 def p_atoms_f(args):
   print('Operations related with atomic positions')
@@ -229,7 +342,7 @@ def p_atoms_f(args):
   p = Poscar(args.input, verbose=False)
   p.parse()
 
-  Modifier = poscar_modify_atoms(p, verbose=args.verbose)
+  Modifier = poscar_modify(p, verbose=args.verbose)
   
   # first dealing with the maths
   if args.multiply:
@@ -292,7 +405,7 @@ def p_lattice_f(args):
   p = Poscar(args.input, verbose=False)
   p.parse()
 
-  Modifier = poscar_modify_PBC(p, verbose=args.verbose)
+  Modifier = poscar_modify(p, verbose=args.verbose)
   
   # first dealing with the factors, if any
   if args.factor == None:
@@ -308,6 +421,7 @@ def p_lattice_f(args):
   return
 
 def p_scell_f(args):
+
   print('Supercell creation')
   if args.verbose:
     print('Input:     ', args.input)
@@ -320,154 +434,13 @@ def p_scell_f(args):
 
   p = Poscar(args.input)
   p.parse()
-  lat = p.lat
-  pos = p.dpos
-  elem = p.elm
-  scell = np.array([args.b1, args.b2, args.b3])
-  if args.verbose:
-    print("original lattice:\n", lat, "\n")
-    print("New lattice (in terms of the original vectors)\n", scell, "\n")
-    print("Cartesian coordinates new lattice:\n", np.dot(scell, lat))
-
-  # inverse: a=ocell*b
-  ocell = np.linalg.inv(scell)
-  if args.verbose:
-    print( "inverse transformation:\n", ocell)
-    print( "atoms, direct\n", pos)
-    print( "atoms in cart\n")
-    print(  np.einsum('ij,jk', pos, lat))
-
-    print( "in terms of new lattice\n")
-  spos = np.einsum('ij,jk', pos, ocell)
-
-  # I need to find the values of n_i, a_i *inside* the supercell.
-  # n_i*a_i = n_i*ocell_ij*b_j
-  # then, the condition is : 0 < n_i*ocell_ij < 1
-  b = np.ones(3)
-  n = np.einsum('j,ji', b, scell )
-  n = int(np.max(np.abs(n)))
-  if args.verbose:
-    print( "maximum value of n to search for repetitions : ", n)
-
-  n = np.arange(-n,n)
-
-  n = np.array([(x,y,z) for z in n for y in n for x in n])
-  nuseful = []
-  #checking which of the previous repetitions works
-  for trial in n:
-    value = np.einsum('i,ij', trial, ocell)
-    if value.min() >= 0 and value.max() < 1:
-      nuseful.append(trial)
-  if args.verbose:
-    print( "set of new coords\n", nuseful)
-  npos = []
-  for nn in nuseful:
-    npos.append(spos + np.einsum('i,ij', nn, ocell))
-  if args.verbose:
-    print( "positions:")
-  npos = np.concatenate(npos)
-  npos = np.mod(npos, 1)
-  if args.verbose:
-    print( npos, npos.shape)
-
-  # I can have repeated elements, such as '0 0 1', and '0 0 0'
-  # (the 1 can be 0.9999999 and fail the previous filter)
-  tol = 0.001
-  temp = []
-  for i in range(len(npos)):
-    repeated = False
-    for j in range(i):
-      d = np.abs(npos[i] - npos[j])
-      for k in range(len(d)):
-        if abs(d[k]-1) < d[k]:
-          d[k]=d[k]-1
-      #print d
-      if np.linalg.norm(d) < tol and i != j:
-        repeated = True
-        if args.verbose:
-          print( i, j, npos[i], npos[j])
-    if not repeated:
-      temp.append(npos[i])
-  temp = np.concatenate(temp)
-  temp.shape = (-1,3)
-  if args.verbose:
-    print( temp.shape)
-  npos = temp[:]
   
-  elem = elem*len(nuseful)
-  #print elem
-  p.elm = elem
-  p.lat = np.dot(scell, lat)
-  p.dpos = npos
-  p._set_cartesian()
+  supercell = poscar_supercell(p, verbose=args.verbose)
+  supercell.supercell(size=[args.b1, args.b2, args.b3])
+  supercell.write(args.output,)
 
-  p.sort()
-
-  # Finally, writing the files
-  if args.sc:
-    p.write(args.output, direct=False)
-  else:
-    p.write(args.output, direct=True)
-  if args.verbose:
-    print("new POSCAR:")
-    print(p.poscar)
-  if args.xyz:
-    p.xyz(args.output + '.xyz')
-    if args.verbose:
-      print('XYZ file written: ', args.output + '.xyz')
-        
+  supercell.write(filename=args.output, cartesian=args.sc, xyz=args.xyz)
   return
-
-def p_cat_f(args):
-  print('Concatenation')
-  if args.verbose:
-    print('Input(s):  ', args.input)
-    print('Output:    ', args.output)
-    print('xyz:       ', args.xyz)
-    print('save_cart: ', args.sc)
-
-  # I will apend the other POSCAR to the first one
-  first = args.input.pop(0)
-  p1 = Poscar(first)
-  p1.parse()
-  if args.verbose:
-    print('file', first, 'loaded.', p1.Ntotal, 'atoms')
-  for filename in args.input:
-    p = Poscar(filename)
-    p.parse()
-    if args.verbose:
-      print('file', filename, 'loaded.', p.Ntotal, 'atoms')
-    # adding the new atoms one by one
-    for i in range(p.Ntotal):
-      pos = p.dpos[i]
-      elem = p.elm[i]
-      direct = True
-      selectiveFlags = None
-      if p.selective:
-        selectiveFlags = p.selectFlags[i]
-      p1.add(position=pos, element=elem, direct=direct, selectiveFlags=selectiveFlags)
-      print(p1.Ntotal)
-  # Once all atoms have been added, I need to sort them
-  p1.sort()
-
-  # Finally, writing the file(s)
-  if args.sc:
-    p1.write(args.output, direct=False)
-  else:
-    p1.write(args.output, direct=True)
-  if args.verbose:
-    print("new POSCAR:")
-    print(p1.poscar)
-  if args.xyz:
-    p1.xyz(args.output + '.xyz')
-    if args.verbose:
-      print('XYZ file written: ', args.output + '.xyz')
-        
-  return
-
-  
-
-
 
   
 
@@ -492,13 +465,6 @@ if __name__ == "__main__":
   
   p_scell = subparsers.add_parser('supercell', help='Creates a supercell')
   p_scell.set_defaults(func=p_scell_f)
-
-  p_cat = subparsers.add_parser('cat', help='concatenates two or more POSCAR files.'
-                                ' This must make sense (user!!!), for instance joining'
-                                ' two layer of graphene to create BLG. You might need '
-                                'to translate the positions of one layer beforehand')
-  p_cat.set_defaults(func=p_cat_f)
-  
   
   # filing the subparser options
   p_atoms.add_argument('input', type=str, help='Input POSCAR file ')
@@ -594,18 +560,6 @@ if __name__ == "__main__":
   p_scell.add_argument('-v', '--verbose', action='store_true')
 
   #########################################
-
-  p_cat.add_argument('input', type=str, nargs='+', help='POSCAR files to concatenate. '
-                     'The user must control the physics')
-  p_cat.add_argument('output', type=str, help='Output file')
-  p_cat.add_argument('-v', '--verbose', action='store_true')
-  p_cat.add_argument('--xyz', action='store_true')
-  p_cat.add_argument('--sc', action='store_true')
-
-  
-  
-
-  args = parser.parse_args()
 
   # there is a python 3 bug. If no argument provided an exception is raised
   #try:
