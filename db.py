@@ -1,9 +1,9 @@
-import db_covalentBond
+import dbCovalentBond
 import numpy as np
 
 class DB:
   def __init__(self):
-    cr = db_covalentBond.covalent_radii
+    cr = dbCovalentBond.covalent_radii
     cr = cr.replace('-', 'nan')
     cr_names = [x.split()[1] for x in cr.split('\n')]
     cr_values = [x.split()[2:] for x in cr.split('\n')]
