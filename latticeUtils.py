@@ -94,7 +94,9 @@ class Neighbors:
     self.poscar = poscar
     self.verbose = verbose
     self.nn_list = None # a list of N lists with neighbor indexes
-    self.db = db.atomicDB # databese with atomic info
+    self.nn_elem = None # the atomic elements of the nn_list
+
+    self.db = db.atomicDB # database with atomic info
     self.distances = distances(positions=self.poscar.cpos,
                                lattice=self.poscar.lat)
     # Maximum distance of a nearest neighbor NxN matrix
@@ -155,7 +157,8 @@ class Neighbors:
     self.nn_list = []
     N = self.poscar.Ntotal
 
-    print(self.d_Max)
+    if self.verbose:
+      print(self.d_Max)
     
     for i in range(N):
       # to store all defects
@@ -166,12 +169,21 @@ class Neighbors:
           if i!=j:
             temp.append(j)
             # if allow_self is True, also accept
-          elif 'allow_self' is True:
+          elif 'allow_self':
             temp.append(j)
       self.nn_list.append(temp)
-        
+
+    self._set_nn_elem()
     if self.verbose:
       print('list of first neighbors:')
-      print(self.nn_list)
+      print(list(zip(self.nn_list, self.nn_elem)))
     return self.nn_list
+    
+  def _set_nn_elem(self):
+    """ sets the elements of the list of nearest neighbors  """
+    nn_elem = []
+    for nns in self.nn_list:
+      temp = [self.poscar.elm[x] for x in nns]
+      nn_elem.append(temp)
+    self.nn_elem = nn_elem
     

@@ -2,6 +2,7 @@
 
 import poscar
 import latticeUtils
+import defects
 import argparse
 
 
@@ -16,5 +17,5 @@ if __name__ == '__main__':
   p = poscar.Poscar(args.inputfile, verbose=args.verbose)
   p.parse()
 
-  lu = latticeUtils.Neighbors(poscar=p, verbose=args.verbose)
-  #lu.estimateMaxBondDist()
+  Defects = defects.FindDefect(poscar=p, verbose=args.verbose)
+  print(Defects.defects)
