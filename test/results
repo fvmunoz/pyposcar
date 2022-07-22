@@ -1,0 +1,24 @@
+POSCAR
+{'find_forgein_atoms': [96]}
+POSCAR-7-9-B.vasp
+
+
+WARNING: in FindDefect.find_forgein_atoms() more than two sets of atoms were found. Cluster delimited by `minima`=  [10 29] , `maxima=` [ 6 15 44]
+Only elements with less than  10 atoms are regarded as defects
+{'find_forgein_atoms': [118, 119]}
+POSCAR-7-9.vasp
+{'find_forgein_atoms': [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119]}
+POSCAR-C3Si.vasp
+{'find_forgein_atoms': [94, 95, 96, 97]}
+POSCAR-C4.vasp
+{'find_forgein_atoms': [94, 95, 96, 97]}
+POSCAR-C6H.vasp
+{'find_forgein_atoms': [92, 93, 94, 95, 96, 97, 98]}
+POSCAR-C6.vasp
+{'find_forgein_atoms': [92, 93, 94, 95, 96, 97]}
+POSCAR-nv.vasp
+{'find_forgein_atoms': [998]}
+POSCAR-SiV.vasp
+{'find_forgein_atoms': [510]}
+POSCAR-V2.vasp
+{'find_forgein_atoms': []}
