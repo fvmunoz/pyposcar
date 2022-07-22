@@ -8,6 +8,8 @@ FindDefect
 
 """
 import latticeUtils
+import poscarUtils
+
 import numpy as np
 try:
   from sklearn.neighbors.kde import KernelDensity
@@ -29,7 +31,7 @@ class FindDefect:
                       # should be here
     self.neighbors = latticeUtils.Neighbors(self.p, verbose=False)
     self.find_forgein_atoms()
-    self.nearest_neighbors_size()
+    self.nearest_neighbors_environment()
     return
 
   def find_forgein_atoms(self):
@@ -59,7 +61,7 @@ class FindDefect:
     maxima = argrelextrema(scores, np.greater)[0]
     if self.verbose:
       print('local max:',maxima,'  localmin:', minima)
-    if len(maxima) < len(minima):
+    if len(maxima) <= len(minima):
       print('Maxima, ', maxima)
       print('Minima, ', minima)
       raise RuntimeError('FindDefect.find_forgein_atoms error: '
@@ -93,16 +95,110 @@ class FindDefect:
     return defects
     # plt.plot(samples, scores) # plt.show()
     
-  def nearest_neighbors_size(self):
+  def nearest_neighbors_environment(self):
+    """This method looks for atoms with an statistically different
+    environment (nearest neighbors).
+
+    The enviornment of each atom (i.e. the number and type of
+    elements) are compared, and those statiscally different from the
+    rest are dibbed as defects.
+
+    A good nearest neighbors list is a must for this method.
+
+    """
     # self.verbose = True
-    nn_list = self.neighbors.nn_list
-    coordination = [len(x) for x in nn_list]
-    unique, counts = np.unique(coordination, return_counts=True)
+    nn_elem = self.neighbors.nn_elem
+    # Building a single string with the environment, it needs to be
+    # sorted, for taking statistics
+    nn_elem = [''.join(sorted(x)) for x in nn_elem]
+    
+    # Assume in hBN a B->N defect, its environment is NNN, which seems
+    # fine, but for a B atom, not when surrounding a N. This means
+    # that the atom at which its environment is being proccesed also
+    # matters. And it can be distinguihed from its environment (no
+    # sorting)
+    nn_elem = [x[0]+x[1] for x in zip(self.p.elm, nn_elem)]
+    
+    # counting the frequency of unique elements
+    from collections import Counter
+    uniques = Counter(nn_elem)
     if self.verbose:
-      print('\ndefetcs.FindDefect.nearest_neighbors_size()')
-      print('neareast neighbors list')
-      print(nn_list)
-      print('coordination')
-      print(coordination)
-      print('Statistics of coordination: unique, counts')
-      print(list(zip(unique, counts)))
+      print('\nFindDefect.nearest_neighbors_environment()')
+      print('Atomic environments and their frequency:')
+      print(list(zip(uniques.keys(), uniques.values())))
+    # now determining which of them are defects
+    
+    data = np.array(list(uniques.values())).reshape(-1, 1)
+    kde = KernelDensity(kernel='gaussian', bandwidth=3).fit(data)
+    # The samples are chosen to have a `max-min-max` pattern (maybe
+    # with extra -min-max blocks)
+    delta = max(int(self.p.Ntotal*0.1),10) # to have a local maximum at start/end
+    samples = np.linspace(-delta, max(data.flatten())+delta)
+    scores = kde.score_samples(samples.reshape(-1,1))
+    # print(scores)
+    #
+    # The local minima of the scores denotes the groups. argrelextrema
+    # returns a tuple, only first entry is useful
+    minima = argrelextrema(scores, np.less)[0] 
+    maxima = argrelextrema(scores, np.greater)[0]
+
+    if self.verbose:
+      print('local max:',maxima,'  localmin:', minima)
+    if len(maxima) <= len(minima):
+      print('Maxima, ', maxima)
+      print('Minima, ', minima)
+      raise RuntimeError('FindDefect.nearest_neighbors_environment error: '
+                         'the local min/max doesnt follows '
+                         'the expected order')
+    # The threshlod to determine if an atom is forgein. 
+    lower_min = minima[0]
+    # likely only the atoms with an environment less abundant than
+    # `lower_min` are to be regarded as defects. But if there are
+    # three or more statistically different types of environment, the
+    # user should be warned 
+    if len(minima) > 1: # printing regardless verbosity
+      print("\n\nWARNING: in FindDefect.nearest_neighbors_environment() more than "
+            "two sets of atoms were found. Cluster delimited by "
+            "`minima`= ", minima, ', `maxima=`', maxima)
+      print('Only elements with environments less abundant than ', lower_min,
+            ' are regarded as defects')
+    
+    defects = []
+    # detecting what atoms are defects
+    # nn_elem is ['CCC', 'CC' CCH, 'CCH', ...]
+    for i in range(len(nn_elem)):
+      environment = nn_elem[i]
+      if uniques[environment] < lower_min:
+        defects.append(i)
+
+    if self.verbose:
+      print('list of defects: ')
+      print([(i,self.p.elm[i]) for i in defects])
+    self.defects['nearest_neighbors_environment'] = defects
+    return defects
+
+  def write_defects(self, method='any', filename='defects.vasp'):
+    """
+    Writes a POSCAR file with the defects marked as dummy atoms
+    
+    `method` can be:
+    'find_forgein_atoms' -> see self.find_forgein_atoms()
+    'nearest_neighbors_environment' -> see self.nearest_neighbors_environment()
+    'any', any method will do
+
+    """
+    if method == 'any':
+      indexes = list(self.defects.values())
+      indexes = [set(x) for x in indexes]
+      indexes = list(set.union(*indexes))
+    else:
+      indexes = self.defects[method]
+
+    N = len(indexes)
+    newElements = ['D']*N
+    
+    newP = poscarUtils.poscar_modify(self.p, verbose=False)
+    newP.change_elements(indexes=indexes, newElements=newElements)
+    newP.write(filename=filename)
+    # print(indexes)
+    

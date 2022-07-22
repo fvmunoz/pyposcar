@@ -109,8 +109,42 @@ class poscar_modify:
       else:
         print(self.p.dpos)      
     return
-  
-  
+
+  def change_elements(self, indexes, newElements, human=False):
+    """It changes the Element of an atom in a poscar object.
+
+    args:
+
+    indexes: the 0-based indexes of the atom to be replaced. A single
+    number, or list
+
+    newElements: the element to replace. Same size of `indexes`
+
+    human: if True, the index will be one-based
+
+    """
+    # converting anything to list
+    try:
+      indexes = np.array(indexes, dtype=int)
+      newElements = list(newElements)
+    except TypeError:
+      indexes = np.array([indexes], dtype=int)
+      newElements = [newElements]
+    if human:
+      indexes = indexes - 1
+      
+    # first retrive the positions
+    dpos = self.p.dpos[indexes]
+    
+    # then removing
+    self.remove(indexes, human=False)
+    # and finally adding a new atoms, one at a time
+    for pos,elem in zip(dpos,newElements):
+      self.add(elem, pos, cartesian=False)
+               
+    if self.verbose:
+      print('Added element ', newElement, 'at direct coord:', dpos)
+      
   def remove(self, atoms, human=False):
     """Removes a list of atoms from the Poscar object. The order of
     remotion is not trivial, but the method (at the Poscar-class
@@ -125,9 +159,10 @@ class poscar_modify:
     # the atoms list could be disordered, Poscar.remove is safe
     if human:
       atoms = atoms - 1
+    self.p.remove(atoms)
     if self.verbose:
       print('removing the following atoms (0-based indexes):', atoms)
-      self.p.remove(atoms)
+      print(self.p.numberSp, self.p.typeSp)
 
   def add(self, element, position, cartesian=True):
     """Adds a single atom to the Poscar object.

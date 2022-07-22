@@ -19,3 +19,6 @@ if __name__ == '__main__':
 
   Defects = defects.FindDefect(poscar=p, verbose=args.verbose)
   print(Defects.defects)
+
+  # going to write a new file to mark the defects
+  Defects.write_defects(method='any', filename=args.inputfile+'_defect.vasp')
