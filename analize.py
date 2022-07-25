@@ -22,3 +22,10 @@ if __name__ == '__main__':
 
   # going to write a new file to mark the defects
   Defects.write_defects(method='any', filename=args.inputfile+'_defect.vasp')
+
+  import clusters
+  
+  cluster = clusters.Clusters(p, verbose=args.verbose,
+                              neighbors=Defects.neighbors,
+                              marked=Defects.all_defects)
+  

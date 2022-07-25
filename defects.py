@@ -28,11 +28,22 @@ class FindDefect:
     self.p = poscar
     self.verbose = verbose
     self.defects = {} # all the defects from the different methods
-                      # should be here
+                      # should be here. It is a dictionary of lists
+    self.all_defects = [] # a simple list with all the defects found
     self.neighbors = latticeUtils.Neighbors(self.p, verbose=False)
     self.find_forgein_atoms()
     self.nearest_neighbors_environment()
     return
+
+  def _set_all_defects(self):
+      """
+      Updates the `self.all_defects` list from `self.defects`. It
+      should be run after any update to `self.defects`
+      """
+      indexes = list(self.defects.values())
+      indexes = [set(x) for x in indexes]
+      indexes = list(set.union(*indexes))
+      self.all_defects = indexes
 
   def find_forgein_atoms(self):
     numberSp = self.p.numberSp # number of atoms per element
@@ -92,6 +103,7 @@ class FindDefect:
       print('list of defects: ')
       print([(i,self.p.elm[i]) for i in defects])
     self.defects['find_forgein_atoms'] = defects
+    self._set_all_defects()
     return defects
     # plt.plot(samples, scores) # plt.show()
     
@@ -175,6 +187,7 @@ class FindDefect:
       print('list of defects: ')
       print([(i,self.p.elm[i]) for i in defects])
     self.defects['nearest_neighbors_environment'] = defects
+    self._set_all_defects()
     return defects
 
   def write_defects(self, method='any', filename='defects.vasp'):
@@ -188,9 +201,7 @@ class FindDefect:
 
     """
     if method == 'any':
-      indexes = list(self.defects.values())
-      indexes = [set(x) for x in indexes]
-      indexes = list(set.union(*indexes))
+      indexes = self.all_defects
     else:
       indexes = self.defects[method]
 
