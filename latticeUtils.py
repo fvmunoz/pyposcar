@@ -4,6 +4,7 @@
  calculates the PBC-aware distances among all positions.
 
 
+add RDF here
 
 """
 import numpy as np
