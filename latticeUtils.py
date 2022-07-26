@@ -103,6 +103,8 @@ class Neighbors:
     # Maximum distance of a nearest neighbor NxN matrix
     self.estimateMaxBondDist()
     self.nn_list = self.set_neighbors()
+    self.d_Max = None # maximum distance for a nearest neighbor (a
+                      # dict, for all interactions)
     return
 
   def estimateMaxBondDist(self):
