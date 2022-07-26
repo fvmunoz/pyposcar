@@ -91,7 +91,7 @@ def distances(positions, lattice=None, allow_self=True, verbose=False):
   return dist
 
 class Neighbors:
-  def __init__(self, poscar, verbose=True):
+  def __init__(self, poscar, verbose=False):
     self.poscar = poscar
     self.verbose = verbose
     self.nn_list = None # a list of N lists with neighbor indexes

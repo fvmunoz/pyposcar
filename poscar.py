@@ -316,7 +316,7 @@ class Poscar:
     self.typeSp = list(OrderedDict.fromkeys(self.elm).keys())
     self.numberSp = [self.elm.count(x) for x in self.typeSp]
     if self.verbose:
-      print('Elements', self.elem)
+      print('Elements', self.elm)
       print(self.typeSp, self.numberSp)
     # sorting the data
     self.sort()

@@ -352,7 +352,7 @@ class poscar_supercell:
     """Just a convenience method 
 
     """
-    pm = poscar_modify(self.poscar, verbose=self.verbose)
+    pm = poscar_modify(self.poscar, verbose=False)
     pm.write(filename=filename, cartesian=cartesian, xyz=xyz)
   
     return

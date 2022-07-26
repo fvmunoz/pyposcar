@@ -9,6 +9,7 @@ FindDefect
 """
 import latticeUtils
 import poscarUtils
+import copy
 
 import numpy as np
 try:
@@ -24,8 +25,9 @@ import matplotlib.pyplot as plt
 class FindDefect:
   """Tries to identify a defect
   """
-  def __init__(self, poscar, verbose=True):
-    self.p = poscar
+  def __init__(self, poscar, verbose=False):
+    # avoiding to modify the original poscar
+    self.p = copy.deepcopy(poscar)
     self.verbose = verbose
     self.defects = {} # all the defects from the different methods
                       # should be here. It is a dictionary of lists
