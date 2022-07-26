@@ -5,6 +5,7 @@ import poscar
 import latticeUtils
 import poscarUtils
 import copy
+import db
 
 class Clusters:
   def __init__(self, poscar, verbose=False, neighbors=None, marked=None):
@@ -22,7 +23,7 @@ class Clusters:
     # has info about the underlying lattice. The 'changes' are
     # virtual, in 'self.marked'
     self.p = copy.deepcopy(poscar)
-                                   
+    self.db = db.DB()
     self.clusters = [] # it a list of lists. One list by each cluster
     self.verbose = verbose
     # calculating the neighbors can be demanding, using them if given
@@ -150,7 +151,53 @@ class Clusters:
       print(removed)
           
   def hydrogenate(self):
-    """
-    Currently it only supports 
+    """It replaces a 'non-marked' nearest neighbor by of the lattice by a H atom.
     
+    The angles (directions) of the bonds are the same of the
+    underlying lattice, but the distances are scaled to better reflect
+    the real distance (maybe inaccurate)
+
     """
+    # first, detect what atoms need to be attached a H atom
+    print('\n\nclusters.py -> Clusters.hydrogenate():...')
+    # I need to iterate over static elements, so better to use a list
+    # instead of a set.
+    marked = list(self.marked)
+    # the nearest neighbors need to be converted to sets. Only for
+    # marked atoms.
+    nn_set = [set(self.neighbors.nn_list[atom]) for atom in marked]
+    print('marked atoms and their neigbors')
+    print(list(zip(marked, nn_set)))
+    # to use '-' marked needs to be a set. Anyways, mutability is not an issue here
+    missing_atoms = [x - self.marked for x in nn_set]
+    print('missing_atoms', missing_atoms)
+    
+    # second, adding the H atoms
+    for atom, ma in zip(marked, missing_atoms):
+      print(atom, ma)
+      for i in ma:
+        p0 = self.p.dpos[atom]
+        p1 = self.p.dpos[i]
+        # delta is the vector to put the H atom
+        delta = p1-p0
+        # It might happen that the neigbor atom belongs to a different
+        # lattice (i.e. [0,0,0.1] and [0,0,0.9]) the H atom should be
+        # at [0,0,0.1-delta], not in [0,0,0.1+delta]. Notice, it is
+        # not necessary to compare all the 3*3*3 possibilities to get
+        # the smallest distance. If the value of any coordinate,
+        # |pos1_i-pos2_i|< 1/2, it is in the rigth cell. This is
+        # because we are working in a large supercell and the error
+        # for wrong PBCs is large too.
+        for i in [1,2,3]:
+          if delta[0] > 0.5:
+            delta[0] = delta[0] - 1
+          elif delta[0] < -0.5:
+            delta[0] = delta[0] + 1
+        # normalizing the direction delta:
+        delta = delta/np.linalg.norm(delta)
+        # bond_length
+        bond_length = self.db.estimateBond(self.p.elm[atom], self.p.elm[i])
+        print('adding H at', i, p0,p1, delta, bond_length)
+        
+          
+        
