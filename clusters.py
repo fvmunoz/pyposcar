@@ -19,8 +19,8 @@ class Clusters:
     `marked` what atoms are marked. If absent, it implies all atoms
 
     """
-    # The poscar object should not be modified within this class. It
-    # has info about the underlying lattice. The 'changes' are
+    # The poscar object shouldn't be modified within this class. It
+    # has info about the underlying lattice. Any 'changes' are
     # virtual, in 'self.marked'
     self.p = copy.deepcopy(poscar)
     self.db = db.DB()
@@ -38,7 +38,6 @@ class Clusters:
       print('atoms marked', self.marked)
     self.find_clusters()
     return
-
 
   def find_clusters(self):
     """It find the clusters (in the crystal's lattice) within the
@@ -157,6 +156,9 @@ class Clusters:
     underlying lattice, but the distances are scaled to better reflect
     the real distance (maybe inaccurate)
 
+    It returns a `poscar_modify` object with (only) the hydrogented
+    cluster
+
     """
     # first, detect what atoms need to be attached a H atom
     print('\n\nclusters.py -> Clusters.hydrogenate():...')
@@ -173,13 +175,10 @@ class Clusters:
     print('missing_atoms', missing_atoms)
     
     # second, adding the H atoms
-    for atom, ma in zip(marked, missing_atoms):
-      print(atom, ma)
-      for i in ma:
-        p0 = self.p.dpos[atom]
-        p1 = self.p.dpos[i]
-        # delta is the vector to put the H atom
-        delta = p1-p0
+    new_H_atoms = []
+    for atom, mas in zip(marked, missing_atoms):
+      print(atom, mas)
+      for ma in mas:
         # It might happen that the neigbor atom belongs to a different
         # lattice (i.e. [0,0,0.1] and [0,0,0.9]) the H atom should be
         # at [0,0,0.1-delta], not in [0,0,0.1+delta]. Notice, it is
@@ -188,16 +187,44 @@ class Clusters:
         # |pos1_i-pos2_i|< 1/2, it is in the rigth cell. This is
         # because we are working in a large supercell and the error
         # for wrong PBCs is large too.
-        for i in [1,2,3]:
-          if delta[0] > 0.5:
-            delta[0] = delta[0] - 1
+        #
+        # We will start working in direct cordinates, to get the
+        # correct lattice vectors shift. Afterwards, we will add the H
+        # atom in cartesian
+        p0 = self.p.dpos[atom]
+        p1 = self.p.dpos[ma]
+        # print('atom', atom, 'missing', ma, 'p0', p0, 'p1', p1)
+        # delta is the vector to put the H atom
+        delta = p1-p0
+        shift = np.array([0,0,0])
+        for i in [0,1,2]:
+          if delta[i] > 0.5:
+            shift[i] = -1
           elif delta[0] < -0.5:
-            delta[0] = delta[0] + 1
+            shift[i] =  1
+
+        # Now that we have the rigth lattice shift, we will aply it to
+        # the cartesian positions.
+        # following the previous example:
+        # p1 = [0,0,.9]
+        # p0 = [0,0,.1]
+        # p1-p0 = [0,0,.8] -> delta
+        # shift = [0,0,-1]
+        # p1-p0-shift = [0,0,-.2]
+        # now doing the same in cartesian
+        p0 = self.p.cpos[atom]
+        p1 = self.p.cpos[ma]
+        shift = np.dot(delta, self.p.lat)
+        delta = p1 - p0 - delta
         # normalizing the direction delta:
         delta = delta/np.linalg.norm(delta)
         # bond_length
-        bond_length = self.db.estimateBond(self.p.elm[atom], self.p.elm[i])
-        print('adding H at', i, p0,p1, delta, bond_length)
+        bond_length = self.db.estimateBond(self.p.elm[atom], self.p.elm[ma])
+        new_H_pos = p0 + delta*bond_length
+        print('adding H at', i, p0,p1, new_H_pos)
+        # only left to add a 'H' atom to the poscar, and mark it
+        new_H_atoms.append(new_H_pos)
+    print('Done')
         
           
         
