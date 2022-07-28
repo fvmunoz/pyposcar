@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
   cluster.extend_clusters(args.size)
 
-  cluster.smooth_edges()
-  cluster.hydrogenate()
-  
+  # cluster.smooth_edges()
   cluster.write(args.inputfile+'_cluster.vasp')
+  # cluster.hydrogenate(args.inputfile+'_cluster.vasp')
+

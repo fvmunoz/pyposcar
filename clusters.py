@@ -149,13 +149,13 @@ class Clusters:
       print('clusters.Clusters.smooth_edges() ... atoms removed (dangling bonds)')
       print(removed)
           
-  def hydrogenate(self):
+  def hydrogenate(self, filename=None):
     """It replaces a 'non-marked' nearest neighbor by of the lattice by a H atom.
     
     The angles (directions) of the bonds are the same of the
     underlying lattice, but the distances are scaled to better reflect
     the real distance (maybe inaccurate)
-
+    
     It returns a `poscar_modify` object with (only) the hydrogented
     cluster
 
@@ -225,6 +225,17 @@ class Clusters:
         # only left to add a 'H' atom to the poscar, and mark it
         new_H_atoms.append(new_H_pos)
     print('Done')
-        
+    # the poscar object should not be modified
+    pu = poscarUtils.poscar_modify(copy.deepcopy(self.p), verbose=False)
+    # a set with all atoms, then removing all non-marked atoms
+    to_remove = set(list(range(pu.p.Ntotal)))
+    to_remove = list(to_remove - self.marked)
+    pu.remove(to_remove)
+    # adding the new H atoms
+    [pu.add('H', x) for x in new_H_atoms]
+    if filename:
+      pu.write(filename)
+    return pu.p
+
           
         
