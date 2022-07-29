@@ -13,6 +13,8 @@ if __name__ == '__main__':
   parser.add_argument('--size', '-n', type=int, help="size in nearest neighbors"
                       " of the cluster to build", default=0)
   parser.add_argument('--smooth', '-s', action='store_true')
+  parser.add_argument('--hydrogenate', '-y', action='store_true')
+
   parser.add_argument('-v', '--verbose', action='store_true')
   
   
@@ -35,6 +37,9 @@ if __name__ == '__main__':
   cluster.extend_clusters(args.size)
   if args.smooth:
     cluster.smooth_edges()
-  cluster.write(args.inputfile+'_cluster.vasp')
-  # cluster.hydrogenate(args.inputfile+'_cluster.vasp')
+
+  if args.hydrogenate:
+    cluster.hydrogenate(args.inputfile+'_cluster.vasp')
+  else:
+    cluster.write(args.inputfile+'_cluster.vasp')
 

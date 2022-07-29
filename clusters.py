@@ -33,6 +33,9 @@ class Clusters:
     self.marked = set(marked)
     if self.marked is None:
       self.marked = set(range(self.p.Ntotal))
+    # the initial_marked atoms should not be removed by
+    # 'smooth_edges'
+    self.initial_marked = set(self.marked)
     if self.verbose:
       print('\n\nclusters.Clusters.__init__():')
       print('atoms marked', self.marked)
@@ -111,50 +114,64 @@ class Clusters:
       print('cluster.Cluster.write() ... going to write ', filename)
     pu.write(filename)
 
-  def smooth_edges(self, ignoreH=False, coordination=1):
+    
+    
+    
+  def smooth_edges(self, ignoreH=False, coordination=1, preserve_original=True):
     """It removes all the 'marked' atoms with coordination equal or lower
     than `coordination`. It is useful to invoke after
     Clusters.extend_clusters()
 
     `ignoreH`: If True, the H atoms with coordination 1 or larger
-    won't be unmarked. Default: False
+    won't be unmarked, regardeless `coordination`. Default: False
+
+    `preserve_original`: If True, the atoms marked when the class was
+    defined, won't be unmarked, regardless the coordination. For
+    instance, the defect wont be touched, only the dangling bonds due
+    to clustering
 
     """
-    # creating a new poscar, only with selected atoms
-    new_pu = poscarUtils.poscar_modify(copy.deepcopy(self.p))
-    # a set with all atoms
-    to_remove = set(list(range(new_pu.p.Ntotal)))
-    to_remove = list(to_remove - self.marked)
-    new_pu.remove(to_remove)
-    new_poscar = new_pu.p
-    
-    cluster_neighbors = latticeUtils.Neighbors(new_poscar)
-    new_nn_list = cluster_neighbors.nn_list
+    nn_list = self.neighbors.nn_list
+    # not removing while iteration
+    to_unmark = []
     if self.verbose:
-      print(list(zip(self.marked,new_nn_list)))
-    # the list(...) is to create an immutable object, I will modify
-    # `self.marked`
-    removed = []
-    for atom, neighbors in list(zip(self.marked,new_nn_list)):
-      if ignoreH is True and self.p.elm[atom] == 'H':
-        cutoff = coordination
-      else:
+      print('clusters.Cluster.smooth_edges(): ... looking for undercoordinate edges')
+    for i in self.marked:
+      # I need to count how many neighbors are marked
+      nn = set(nn_list[i])
+      cluster_coord = len(nn & self.marked)
+      if ignoreH is True and self.p.elm[i] == 'H':
         cutoff = 1
+      else:
+        cutoff = coordination
         
-      if len(neighbors) <= cutoff:
-          self.marked.remove(atom)
-          removed.append(atom)
-
+      if cluster_coord <= cutoff:
+        to_unmark.append(i)
+        if self.verbose:
+          print('atom', i,nn, '. cluster coordination',cluster_coord)
+    # The atoms marked as "defects" should not be unmarked, it would
+    # change the physics
+    if self.verbose:
+      print('undercoordinate atoms:', to_unmark)
+    if preserve_original:
+      to_unmark = set(to_unmark) - self.initial_marked
+    if self.verbose:
+      print('excluding the initial set of marked atoms,')
+      print('undercoordinate atoms:', to_unmark)
+    
+    self.marked = self.marked - to_unmark
     if self.verbose:
       print('clusters.Clusters.smooth_edges() ... atoms removed (dangling bonds)')
-      print(removed)
-          
+      print(to_unmark)
+      
+
+      
   def hydrogenate(self, filename=None):
     """It replaces a 'non-marked' nearest neighbor by of the lattice by a H atom.
     
     The angles (directions) of the bonds are the same of the
     underlying lattice, but the distances are scaled to better reflect
-    the real distance (maybe inaccurate)
+    the real distance (inaccurately)
     
     It returns a `poscar_modify` object with (only) the hydrogented
     cluster
@@ -221,7 +238,7 @@ class Clusters:
         # bond_length
         bond_length = self.db.estimateBond(self.p.elm[atom], self.p.elm[ma])
         new_H_pos = p0 + delta*bond_length
-        print('adding H at', i, p0,p1, new_H_pos)
+        print('adding H at', atom, p0,p1, new_H_pos)
         # only left to add a 'H' atom to the poscar, and mark it
         new_H_atoms.append(new_H_pos)
     print('Done')
