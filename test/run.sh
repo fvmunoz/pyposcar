@@ -20,6 +20,16 @@ do
     rm ${i}_defect.vasp 
     diff  aux/${i}_cluster-n2.vasp results/${i}_cluster-n2.vasp
 
+    ../analize.py $i -n 1 -s > temp-s1
+    mv ${i}_cluster.vasp aux/${i}_cluster-s1.vasp
+    rm ${i}_defect.vasp 
+    diff  aux/${i}_cluster-s1.vasp results/${i}_cluster-s1.vasp
+
+    ../analize.py $i -n 2 -s > temp-s2
+    mv ${i}_cluster.vasp aux/${i}_cluster-s2.vasp
+    rm ${i}_defect.vasp 
+    diff  aux/${i}_cluster-s2.vasp results/${i}_cluster-s2.vasp
+
 done
 diff temp results/results
 diff temp-n1 results/results-n1
