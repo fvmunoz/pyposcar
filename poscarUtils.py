@@ -598,6 +598,8 @@ if __name__ == "__main__":
 
   # there is a python 3 bug. If no argument provided an exception is raised
   #try:
+  args = parser.parse_args()
+
   args.func(args)
   #except AttributeError:
   #  parser.error("too few arguments")
