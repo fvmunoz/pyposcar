@@ -203,8 +203,8 @@ class Clusters:
     #  know what to do. But at least print a warning to the user
     missing_used = []
     for atom, mas in zip(marked, missing_atoms):
-      if len(mas) > 0:
-        print(atom, mas)
+      if len(mas) > 0 and self.verbose:
+        print('atom', atom, 'missing atom', mas)
       for ma in mas:
         # adding the atom `ma` to the list of used neighbors
         missing_used.append(ma)
@@ -264,9 +264,9 @@ class Clusters:
         #   print('adding H at', atom, p0,p1, new_H_pos)
         # only left to add a 'H' atom to the poscar, and mark it
         new_H_atoms.append(new_H_pos)
-    print('Done')
     # warning the user if there an missing atom was replaced by two or more H.
-    print('going to serach for duplicates')
+    if self.verbose:
+      print('going to serach for duplicates (only reporting if found)')
     if len(set(missing_used)) != len(missing_used):
       print('\nclusters.Clusters.hydrogrnate(): at least one atom was replaced'
             ' more than than once by an H. This could be unphysical. It'

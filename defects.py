@@ -10,6 +10,7 @@ FindDefect
 import latticeUtils
 import poscarUtils
 import copy
+import generalUtils
 
 import numpy as np
 try:
@@ -66,11 +67,16 @@ class FindDefect:
     delta = max(int(self.p.Ntotal*0.1),10) # to have a local maximum at start/end
     samples = np.linspace(-delta, max(numberSp.flatten())+delta)
     scores = kde.score_samples(samples.reshape(-1,1))
-    # print(scores)
+    samples, scores = generalUtils.remove_flat_points(samples, scores)
+    print(scores)
+    # plt.plot(samples, scores)
+    # plt.show()
+    self.verbose = True
     #
     # The local minima of the scores denotes the groups. argrelextrema
     # returns a tuple, only first entry is useful
-    minima = argrelextrema(scores, np.less)[0] 
+    minima = argrelextrema(scores, np.less)[0]
+    print(argrelextrema(scores, np.less))
     maxima = argrelextrema(scores, np.greater)[0]
     if self.verbose:
       print('local max:',maxima,'  localmin:', minima)
@@ -107,7 +113,6 @@ class FindDefect:
     self.defects['find_forgein_atoms'] = defects
     self._set_all_defects()
     return defects
-    # plt.plot(samples, scores) # plt.show()
     
   def nearest_neighbors_environment(self):
     """This method looks for atoms with an statistically different
