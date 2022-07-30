@@ -6,6 +6,8 @@ import latticeUtils
 import poscarUtils
 import copy
 import db
+import warnings
+
 
 class Clusters:
   def __init__(self, poscar, verbose=False, neighbors=None, marked=None):
@@ -178,24 +180,34 @@ class Clusters:
 
     """
     # first, detect what atoms need to be attached a H atom
-    print('\n\nclusters.py -> Clusters.hydrogenate():...')
+    if self.verbose:
+      print('\n\nclusters.py -> Clusters.hydrogenate():...')
     # I need to iterate over static elements, so better to use a list
     # instead of a set.
     marked = list(self.marked)
     # the nearest neighbors need to be converted to sets. Only for
     # marked atoms.
     nn_set = [set(self.neighbors.nn_list[atom]) for atom in marked]
-    print('marked atoms and their neigbors')
-    print(list(zip(marked, nn_set)))
+    if self.verbose:
+      print('marked atoms and their neigbors')
+      print(list(zip(marked, nn_set)))
     # to use '-' marked needs to be a set. Anyways, mutability is not an issue here
     missing_atoms = [x - self.marked for x in nn_set]
-    print('missing_atoms', missing_atoms)
+    if self.verbose:
+      print('missing_atoms', missing_atoms)
     
     # second, adding the H atoms
     new_H_atoms = []
+    #  Suppose that atoms 1,2 have a common missing neighbor. The
+    #  following procedure could have two very close H atoms. I don't
+    #  know what to do. But at least print a warning to the user
+    missing_used = []
     for atom, mas in zip(marked, missing_atoms):
-      print(atom, mas)
+      if len(mas) > 0:
+        print(atom, mas)
       for ma in mas:
+        # adding the atom `ma` to the list of used neighbors
+        missing_used.append(ma)
         # It might happen that the neigbor atom belongs to a different
         # lattice (i.e. [0,0,0.1] and [0,0,0.9]) the H atom should be
         # at [0,0,0.1-delta], not in [0,0,0.1+delta]. Notice, it is
@@ -214,12 +226,17 @@ class Clusters:
         # delta is the vector to put the H atom
         delta = p1-p0
         shift = np.array([0,0,0])
+        # shifted = False
         for i in [0,1,2]:
           if delta[i] > 0.5:
+            shifted = True
             shift[i] = -1
-          elif delta[0] < -0.5:
+          elif delta[i] < -0.5:
+            shifted = True
             shift[i] =  1
-
+        # if shifted:
+        #   print('delta (rec)', delta)
+        #   print('shift direct',shift)
         # Now that we have the rigth lattice shift, we will aply it to
         # the cartesian positions.
         # following the previous example:
@@ -231,28 +248,44 @@ class Clusters:
         # now doing the same in cartesian
         p0 = self.p.cpos[atom]
         p1 = self.p.cpos[ma]
-        shift = np.dot(delta, self.p.lat)
-        delta = p1 - p0 - delta
+        shift = np.dot(shift, self.p.lat)
+        delta = p1 - p0 + shift
+        # if shifted:
+        #   print('shift cart', shift)
+        #   print('p1', p1)
+        #   print('p0', p0)
+        #   print('p1-p0+shift', delta)
         # normalizing the direction delta:
         delta = delta/np.linalg.norm(delta)
         # bond_length
-        bond_length = self.db.estimateBond(self.p.elm[atom], self.p.elm[ma])
+        bond_length = 1.08 #self.db.estimateBond(self.p.elm[atom], self.p.elm[ma])
         new_H_pos = p0 + delta*bond_length
-        print('adding H at', atom, p0,p1, new_H_pos)
+        # if shifted:
+        #   print('adding H at', atom, p0,p1, new_H_pos)
         # only left to add a 'H' atom to the poscar, and mark it
         new_H_atoms.append(new_H_pos)
     print('Done')
-    # the poscar object should not be modified
+    # warning the user if there an missing atom was replaced by two or more H.
+    print('going to serach for duplicates')
+    if len(set(missing_used)) != len(missing_used):
+      print('\nclusters.Clusters.hydrogrnate(): at least one atom was replaced'
+            ' more than than once by an H. This could be unphysical. It'
+            ' requires to be checked by the user ')
+      print('list of missing atoms replaced by H', missing_used)
+      from collections import Counter
+      print('missing atoms usage', Counter(missing_used))
+      warnings.warn('At least one atom was replaced twice (or more times)'
+                    ' by an H. Check wether this makes sense')
     pu = poscarUtils.poscar_modify(copy.deepcopy(self.p), verbose=False)
     # a set with all atoms, then removing all non-marked atoms
     to_remove = set(list(range(pu.p.Ntotal)))
     to_remove = list(to_remove - self.marked)
     pu.remove(to_remove)
-    # adding the new H atoms
+    #adding the new H atoms
     [pu.add('H', x) for x in new_H_atoms]
     if filename:
       pu.write(filename)
     return pu.p
-
+    
           
         
