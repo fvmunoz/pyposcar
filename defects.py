@@ -69,8 +69,8 @@ class FindDefect:
     scores = kde.score_samples(samples.reshape(-1,1))
     samples, scores = generalUtils.remove_flat_points(samples, scores)
     print(scores)
-    # plt.plot(samples, scores)
-    # plt.show()
+    #plt.plot(samples, scores)
+    #plt.show()
     self.verbose = True
     #
     # The local minima of the scores denotes the groups. argrelextrema
@@ -86,8 +86,14 @@ class FindDefect:
       raise RuntimeError('FindDefect.find_forgein_atoms error: '
                          'the local min/max doesnt follows '
                          'the expected order')
-    # The threshlod to determine if an atom is forgein. 
-    lower_min = minima[0]
+    # The threshlod to determine if an atom is forgein.
+    try: # perhaps there is no minumum
+      lower_min = minima[0]
+    except IndexError:
+      print('\n\ndefects.FindDefect.find_forgein_atoms(): No defect found')
+      self.defects['find_forgein_atoms'] = []
+      self._set_all_defects()
+      return
     # likely only the smallest cluster of atoms are defects, but if
     # there are three or more cluster, I am not so sure, and the user
     # should be warned
@@ -169,8 +175,15 @@ class FindDefect:
       raise RuntimeError('FindDefect.nearest_neighbors_environment error: '
                          'the local min/max doesnt follows '
                          'the expected order')
-    # The threshlod to determine if an atom is forgein. 
-    lower_min = minima[0]
+    # The threshlod to determine if an atom is forgein.
+    try:
+      lower_min = minima[0]
+    except IndexError:
+      print('\n\ndefects.FindDefect.nearest_neighbors_environment(): No defect found')
+      self.defects['nearest_neighbors_environment'] = []
+      self._set_all_defects()
+      return
+
     # likely only the atoms with an environment less abundant than
     # `lower_min` are to be regarded as defects. But if there are
     # three or more statistically different types of environment, the
