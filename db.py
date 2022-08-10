@@ -19,6 +19,12 @@ class DB:
     radii1 = np.nanmax(self.covalentRadii[element1])
     radii2 = np.nanmax(self.covalentRadii[element2])
     return radii1 + radii2
+  def get_bandwidth(self, element1, element2):
+    if((element1 == "H") or (element2 == "H")):
+      return 0.02
+    else:
+      return 0.1
+  	
     
     
 

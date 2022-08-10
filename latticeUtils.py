@@ -9,7 +9,7 @@ add RDF here
 """
 import numpy as np
 import db
-
+import rdf
 np.set_printoptions(precision=4, linewidth=160, suppress=True)
 
 
@@ -146,7 +146,7 @@ class Neighbors:
       print(self.d_Max)
     return self.d_Max
 
-  def set_neighbors(self, allow_self=True):
+  def set_neighbors(self,allow_self=True):
     """setting the nearest neighbors by using self.d_Max as cutoff
     distance
 
@@ -159,9 +159,16 @@ class Neighbors:
      """
     self.nn_list = []
     N = self.poscar.Ntotal
-
+    
+    my_RDF = rdf.RDF(self.poscar)
+    
+    self.d_Max = np.minimum(my_RDF.CutoffMatrix, self.d_Max)
+    
     if self.verbose:
       print(self.d_Max)
+      
+    ### Añadir MIS minimos
+    
     
     for i in range(N):
       # to store all defects

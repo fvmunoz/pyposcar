@@ -12,9 +12,9 @@ def remove_flat_points(samples, scores):
   `samples` must be ordered 
   
   """
-  print('\n remove_flat_points')
-  print(samples)
-  print(scores)
+  #print('\n remove_flat_points')
+  #print(samples)
+  #print(scores)
   last_score = scores[0]
   new_samples, new_scores = [], []
   new_samples.append(samples[0])

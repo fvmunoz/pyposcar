@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import poscar
 import latticeUtils
 import defects
 import argparse
+import rdf
 
 
 
@@ -22,8 +23,8 @@ if __name__ == '__main__':
   
   p = poscar.Poscar(args.inputfile, verbose=False)
   p.parse()
-
-  Defects = defects.FindDefect(poscar=p, verbose=args.verbose)
+  
+  Defects = defects.FindDefect(poscar=p,verbose=args.verbose)
   print(Defects.defects)
 
   # going to write a new file to mark the defects
