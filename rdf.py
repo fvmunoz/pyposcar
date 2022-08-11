@@ -2,7 +2,10 @@ from code import interact
 import numpy as np
 from poscar import Poscar
 import latticeUtils
-from sklearn.neighbors._kde import KernelDensity
+try:
+  from sklearn.neighbors.kde import KernelDensity
+except:
+  from sklearn.neighbors import KernelDensity
 import scipy
 import scipy.signal
 import matplotlib.pyplot as plt
