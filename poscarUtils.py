@@ -4,6 +4,50 @@ import argparse
 import numpy as np
 from poscar import Poscar
 
+def poscarDiff(poscar1, poscar2, tolerance=0.01):
+  # are the elelements the same
+  #
+  # differences = {}
+  #
+  # if p1.elm == p2.elm
+  # differences['elements'] = ...
+  # ....
+  # # check lattice
+  # for i in [0,1,2]:
+  #  for j in [0,1,2]:
+  #   l1 = np.cdot(p1.lat[i], p1.lat[j])
+  #   l2 = np.cdot(p2.lat[i], p2.lat[j])  
+  #     if abs(l1-l2) > tolerance:
+  #       return ('lattice', abs(l1-l2))...
+  # ...
+  #
+  #  
+  # d1 = distances(p1.cpos, lattice=p1.lat)
+  # d2 = distances(p2.cpos, lattice=p2.lat)
+  # delta = d1-d2
+  # delta = np.linalg.norm(delta)
+  # if delta < tolerance:
+  #  return False
+  # else:
+  #  return delta
+  #
+  # if differences[all_fields] == 0 or None:
+  #   return False
+  # else:
+  #   differences
+  # 
+  pass
+
+# diff = poscarDiff(p1, p2)
+# if diff is True:
+#   # son distintos
+#   if diff['elements'] != None:
+#     print('los elementos son distintos!', diff['elements'])
+#     # '10 C != 10 H'
+  
+  
+  
+
 class poscar_modify:
   """ class to change properties of a Poscar-object.
       It requires a poscar-object, not a filename.
