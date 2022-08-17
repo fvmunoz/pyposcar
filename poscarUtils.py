@@ -3,40 +3,34 @@
 import argparse
 import numpy as np
 from poscar import Poscar
+import latticeUtils
+
 
 def poscarDiff(poscar1, poscar2, tolerance=0.01):
-  # are the elelements the same
-  #
-  # differences = {}
-  #
-  # if p1.elm == p2.elm
-  # differences['elements'] = ...
-  # ....
-  # # check lattice
-  # for i in [0,1,2]:
-  #  for j in [0,1,2]:
-  #   l1 = np.cdot(p1.lat[i], p1.lat[j])
-  #   l2 = np.cdot(p2.lat[i], p2.lat[j])  
-  #     if abs(l1-l2) > tolerance:
-  #       return ('lattice', abs(l1-l2))...
-  # ...
-  #
-  #  
-  # d1 = distances(p1.cpos, lattice=p1.lat)
-  # d2 = distances(p2.cpos, lattice=p2.lat)
-  # delta = d1-d2
-  # delta = np.linalg.norm(delta)
-  # if delta < tolerance:
-  #  return False
-  # else:
-  #  return delta
-  #
-  # if differences[all_fields] == 0 or None:
-  #   return False
-  # else:
-  #   differences
-  # 
-  pass
+  differences = {}
+  #Checking for type of elements
+  if(list(poscar1.elm) != list(poscar2.elm)):
+    differences = "Elements"
+    return differences
+  #The rest only makes sense to check if *.elm is the same
+  #Checking lattice
+  lat_delta = np.zeros((3,3))
+  for i in [0,1,2]:
+    for j in [0,1,2]:
+      lat_1 = np.dot(poscar1.lat[i], poscar1.lat[j])
+      lat_2 = np.dot(poscar2.lat[i], poscar2.lat[j])
+      lat_delta[i,j] = np.abs(lat_1 - lat_2)
+  for delta in lat_delta:
+    if(any([x > tolerance for x in delta])):
+      differences['lattices'] = lat_delta
+  #Checking distances
+  d1 = latticeUtils.distances(poscar1.cpos, lattice=poscar1.lat)
+  d2 = latticeUtils.distances(poscar2.cpos, lattice=poscar2.lat) 
+  delta = d1 - d2
+  delta = np.linalg.norm(delta)
+  if(delta > tolerance):
+    differences['distances'] = delta
+  return differences
 
 # diff = poscarDiff(p1, p2)
 # if diff is True:
