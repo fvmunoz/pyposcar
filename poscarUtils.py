@@ -24,11 +24,12 @@ def poscarDiff(poscar1, poscar2, tolerance=0.01):
   if(list(poscar1.elm) != list(poscar2.elm)):
     differences['Elements'] = (list(poscar1.elm),list(poscar2.elm))
     return differences
-  #The rest only makes sense to check if *.elm is the same
+  #The rest only makes sense to check if elements are the same
   #Checking lattice
   lat_delta = np.zeros((3,3))
   for i in [0,1,2]:
     for j in [0,1,2]:
+      #We compare the module of all lattice vectors 
       lat_1 = np.dot(poscar1.lat[i], poscar1.lat[j])
       lat_2 = np.dot(poscar2.lat[i], poscar2.lat[j])
       lat_delta[i,j] = np.abs(lat_1 - lat_2)
@@ -36,9 +37,11 @@ def poscarDiff(poscar1, poscar2, tolerance=0.01):
     if(any([x > tolerance for x in delta])):
       differences['lattices'] = lat_delta
   #Checking distances
+  #We get the distance matrix, wich includes distances between atoms for all atoms 
   d1 = latticeUtils.distances(poscar1.cpos, lattice=poscar1.lat)
-  d2 = latticeUtils.distances(poscar2.cpos, lattice=poscar2.lat) 
+  d2 = latticeUtils.distances(poscar2.cpos, lattice=poscar2.lat)
   delta = d1 - d2
+  #We take the norm of the difference between the distances
   delta = np.linalg.norm(delta)
   if(delta > tolerance):
     differences['distances'] = delta
