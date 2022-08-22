@@ -7,10 +7,22 @@ import latticeUtils
 
 
 def poscarDiff(poscar1, poscar2, tolerance=0.01):
+  """It compares two different Poscar objects. Small numerical errors
+  up to `tolerance` are ignored.
+
+  Return: a dictionary with the differences found. If the files are
+  the same, it returns an empty dictionary
+
+  The comparison does:
+  -comparison between elements
+  -comparison between lattices (distances and angles)
+  -comparison of the relative distances between atoms
+
+  """
   differences = {}
   #Checking for type of elements
   if(list(poscar1.elm) != list(poscar2.elm)):
-    differences = "Elements"
+    differences['Elements'] = (list(poscar1.elm),list(poscar2.elm))
     return differences
   #The rest only makes sense to check if *.elm is the same
   #Checking lattice
@@ -31,14 +43,6 @@ def poscarDiff(poscar1, poscar2, tolerance=0.01):
   if(delta > tolerance):
     differences['distances'] = delta
   return differences
-
-# diff = poscarDiff(p1, p2)
-# if diff is True:
-#   # son distintos
-#   if diff['elements'] != None:
-#     print('los elementos son distintos!', diff['elements'])
-#     # '10 C != 10 H'
-  
   
   
 
