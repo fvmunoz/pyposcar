@@ -71,7 +71,7 @@ for task in tasks:
   for filename in POSCAR:
     
     # first running analize.py
-    print(filename + '...')
+    print(filename + ' ... ', end='')
     command = executable
     outfile = ' >> ' + auxdir + 'temp'
     cmdline = ' '.join([command, task['options'], filename, outfile])

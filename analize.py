@@ -34,7 +34,8 @@ if __name__ == '__main__':
   cluster = clusters.Clusters(p, verbose=args.verbose,
                               neighbors=Defects.neighbors,
                               marked=Defects.all_defects)
-
+  # just to avoid a warning in the automated test
+  cluster.disable_warning = True
   cluster.extend_clusters(args.size)
   if args.smooth:
     cluster.smooth_edges()

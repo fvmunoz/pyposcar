@@ -9,6 +9,7 @@ import db
 import warnings
 
 
+
 class Clusters:
   def __init__(self, poscar, verbose=False, neighbors=None, marked=None):
     """Class to find and define clusters. There are "marked atoms",
@@ -28,6 +29,7 @@ class Clusters:
     self.db = db.DB()
     self.clusters = [] # it a list of lists. One list by each cluster
     self.verbose = verbose
+    self.disable_warning = False
     # calculating the neighbors can be demanding, using them if given
     self.neighbors = neighbors
     if self.neighbors is None:
@@ -267,7 +269,7 @@ class Clusters:
     # warning the user if there an missing atom was replaced by two or more H.
     if self.verbose:
       print('going to serach for duplicates (only reporting if found)')
-    if len(set(missing_used)) != len(missing_used):
+    if len(set(missing_used)) != len(missing_used) and self.disable_warning == False:
       print('\nclusters.Clusters.hydrogrnate(): at least one atom was replaced'
             ' more than than once by an H. This could be unphysical. It'
             ' requires to be checked by the user ')
