@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
+
 import poscar
 #import latticeUtils
 import defects
-import pyprocar
+#import pyprocar
 import os
 ORB_Dict  = {"s" :  [0], "p":[1,2,3], "d":[4,5,6,7,8], "f":[9,10,11,12,13,14,15]}
 #Need default value for elimit
@@ -68,3 +70,6 @@ def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savef
     os.system("chmod +rwx plot_file.py")
     
     #pyprocar.bandsplot(PROCAR,outcar = outcar, elimit = elimit, mode = mode_,savefig = savefigure ,atoms = atoms, orbitals = asked_orb)
+
+if __name__ == '__main__':
+    plot(orbitals='s', POSCAR='POSCAR')

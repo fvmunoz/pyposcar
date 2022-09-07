@@ -1,0 +1,9 @@
+NVasquez:
+
+1) Handle the case when no defects are found. Every atom should be selected, right?
+
+2) If there is only one Kpoint, the atomic mode should be set by default.
+
+FMunoz:
+
+1) add some tests for plot_bands.py
