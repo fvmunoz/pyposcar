@@ -37,11 +37,21 @@ class Poscar:
     self.selectFlags = None # all the T,F from selective dynamics. np.array(str)
     return
     
-  def parse(self):
-    """Loads into memory all the content of the POSCAR file."""
+  def parse(self, fromString=None):
+    """Loads into memory all the content of the POSCAR file.
+    Args:
     
-    self.poscar = open(self.filename, 'r')
-    self.poscar = self.poscar.readlines()
+    `fromString` : If present, instead of loading a file, it uses this
+    variable as a string with the contents of the POSCAR file. Default=None
+
+    """
+    if fromString and isinstance(fromString, str):
+      self.poscar = fromString.split('\n')
+    elif fromString and isinstance(fromString, list):
+      self.poscar = fromString
+    else:
+      self.poscar = open(self.filename, 'r')
+      self.poscar = self.poscar.readlines()
 
     # getting the scale factor
     scale = re.findall(r'[.\d]+', self.poscar[1])
