@@ -60,18 +60,18 @@ class Poscar:
       print('scaling factor: ', scale)
     
     # parsing the lattice
-    self.lat = re.findall(r'[-.\d]+\s+[-.\d]+\s+[-.\d]+\s*\n', ''.join(self.poscar[2:5]))
+    self.lat = re.findall(r'[-.\d]+\s+[-.\d]+\s+[-.\d]+\s*\n*', ''.join(self.poscar[2:5]))
     self.lat = np.array([x.split() for x in self.lat], dtype=float)*scale
     if self.verbose:
       print( 'lattice:\n', self.lat)
 
     # type of atoms and number of atoms per type
-    self.typeSp = re.findall(r'(\w+)\s+', self.poscar[5])
+    self.typeSp = re.findall(r'(\w+)\s*', self.poscar[5])
     if len(self.typeSp) == 0:
       raise RuntimeError("No data about the atomic species found. Correct it.")
     if self.verbose:
       print( 'atoms per species:\n', self.typeSp)
-    self.numberSp = re.findall(r'(\d+)\s+', self.poscar[6])
+    self.numberSp = re.findall(r'(\d+)\s*', self.poscar[6])
     self.numberSp = np.array(self.numberSp, dtype=int)
     self.Ntotal = np.sum(self.numberSp)
     if self.verbose:
@@ -100,7 +100,7 @@ class Poscar:
 
     # parsing the positions
     start, end = 8+offset, 8+offset+ self.Ntotal
-    string = r'([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)\s+'
+    string = r'([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)\s*'
     pos = re.findall(string, ''.join(self.poscar[start:end]))
     if direct:
       self.dpos = np.array(pos, dtype=float)
