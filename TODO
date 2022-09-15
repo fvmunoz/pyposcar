@@ -1,12 +1,8 @@
 NVasquez:
 
-1) Handle the case when no defects are found. Every atom should be selected, right?
+1) make it fully functioning from terminal (arguments and all)
 
-2) If there is only one Kpoint, the atomic mode should be set by default. Search for 'NKPTS =     61'
-
-3) Look for spin, if it is spinful (ISPIN  =      2 ), set cmap='seismic', vmax=1.0, vmin=-1.0
-
-4) orbitals, default = s+p+d
+2) orbitals, default = s+p+d
 
 FMunoz:
 
