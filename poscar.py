@@ -35,6 +35,7 @@ class Poscar:
     self.elm = None # Element of each atoms one-by-one. list(str)
     self.selective = None # Selective dynamics
     self.selectFlags = None # all the T,F from selective dynamics. np.array(str)
+    self.volume = None
     return
     
   def parse(self, fromString=None):
@@ -125,6 +126,8 @@ class Poscar:
     if self.verbose:
       print('Elements: ', self.elm)
 
+    # setting the volume, just as an utility
+    self.volume = np.linalg.det(self.lat)
     return
 
   def _set_cartesian(self):
