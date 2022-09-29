@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 import re 
 import poscar
-#import latticeUtils
+import argparse
 import defects
-#import pyprocar
 import os
+
 ORB_Dict  = {"s" :  [0], "p":[1,2,3], "d":[4,5,6,7,8], "f":[9,10,11,12,13,14,15]}
 #Need default value for elimit
 elimit = [-2,2]
 mode_ = "parametric"
 
-
+###CLASSIFY
 def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savefigure = "Band_plot"):
     """ Writes a script that uses pyprocar.bansplot() to plot the bands from a PROCAR and OUTCAR file
         for defect atoms from a given POSCAR file
@@ -68,7 +68,7 @@ def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savef
     file.write("] \n")
 
     #Checking OUTCAR for SPIN and Kpoint information
-    out = open("OUTCAR" ,"r")
+    out = open(OUTCAR ,"r")
     out = out.readlines()
     if(out):
         match_KPOINTS = [re.findall(r'NKPTS\s*=\s*(\d*)', line) for line in out]
@@ -99,4 +99,29 @@ def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savef
     #pyprocar.bandsplot(PROCAR,outcar = outcar, elimit = elimit, mode = mode_,savefig = savefigure ,atoms = atoms, orbitals = asked_orb)
 
 if __name__ == '__main__':
-    plot(orbitals='s', POSCAR='POSCAR')
+    #plot(orbitals='s', POSCAR='POSCAR')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--orbitals","-o", type=str,default = "spd", help = "Orbitals asked for ploting Ex = spd")
+    parser.add_argument("--poscar","-g", type=str,default = "POSCAR", help = "POSCAR file name")
+    parser.add_argument("--procar","-p", type=str,default = "PROCAR", help = "PROCAR file name")
+    parser.add_argument("--outcar","-t", type=str,default = "OUTCAR", help = "OUTCAR file name")
+    parser.add_argument("--bandplot","-b", type=str,default = "Band_Plot", help = "Plot file name")
+    parser.add_argument("--run", action='store_true')
+    args = parser.parse_args()
+    if args.orbitals:
+        orbitals = [*args.orbitals]
+    if args.POSCAR:
+        POSCAR = args.POSCAR
+    if args.PROCAR:
+        PROCAR = args.PROCAR
+    if args.OUTCAR:
+        OUTCAR = args.OUTCAR
+    if args.Band_Plot:
+        savefigure = args.Band_Plot
+    plot(orbitals = orbitals, POSCAR = POSCAR, PROCAR = PROCAR, OUTCAR = OUTCAR, savefigure = savefigure)
+    if args.run:
+        os.system("./plot_file.py")
+    
+
+
+    
