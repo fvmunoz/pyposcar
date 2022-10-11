@@ -11,7 +11,7 @@ elimit = [-2,2]
 mode_ = "parametric"
 
 
-def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savefigure = "Band_plot"):
+def plot(orbitals=['s','p','d'], POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savefigure = "Band_plot"):
     """ Writes a script that uses pyprocar.bansplot() to plot the bands from a PROCAR and OUTCAR file
         for defect atoms from a given POSCAR file
 
@@ -19,53 +19,59 @@ def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savef
         -Can select a file to save the figure plotted
     """
     #Get list of defects for atoms
-    file = open("plot_file.py", "w")
-    file.write("#!/usr/bin/env python3 \n")
-    file.write("import pyprocar \n")
-    file.write("##Asumed default values are \n")
-    file.write("#Energy limit values \n")
-    file.write("elimit = [-2,2] \n")
-    file.write("#Orbital dictionary used \n")
-    file.write("ORB_Dict  = {'s' :  [0], 'p':[1,2,3], 'd':[4,5,6,7,8], 'f':[9,10,11,12,13,14,15]}\n")
-    file.write("#POSCAR,PROCAR, OUTCAR, and Ploted figure files \n")
-    file.write("POSCAR = '"+POSCAR+"'\n")
-    file.write("PROCAR = '"+PROCAR+"'\n")
-    file.write("OUTCAR = '"+OUTCAR+"'\n")
-    file.write("savefigure = '"+savefigure+"'\n")
+    f = open("plot_file.py", "w")
+    f.write("#!/usr/bin/env python3 \n")
+    f.write("import pyprocar \n")
+    f.write("##Asumed default values are \n")
+    f.write("#Energy limit values \n")
+    f.write("elimit = [-2,2] \n")
+    f.write("#Orbital dictionary used \n")
+    f.write("ORB_Dict  = {'s' :  [0], 'p':[1,2,3], 'd':[4,5,6,7,8], 'f':[9,10,11,12,13,14,15]}\n")
+    f.write("#POSCAR,PROCAR, OUTCAR, and Ploted figure files \n")
+    f.write("POSCAR = '"+POSCAR+"'\n")
+    f.write("PROCAR = '"+PROCAR+"'\n")
+    f.write("OUTCAR = '"+OUTCAR+"'\n")
+    f.write("savefigure = '"+savefigure+"'\n")
 
-
-
+    
+    
     
     POSCAR_ = poscar.Poscar(POSCAR)
     POSCAR_.parse()
-    Defects = defects.FindDefect(POSCAR_)
-    atoms  = Defects.all_defects
+    # trying to identifying any feature
+    try:
+      Defects = defects.FindDefect(POSCAR_)
+      atoms  = Defects.all_defects
+    # if no error, there are no features
+    except IndexError:
+      atoms = []
+    
     #If no defects were found, default to use all atoms instead
     if(atoms == []):
         print("No defects were found on ", POSCAR)
         atoms = range(POSCAR_.Ntotal)
     line = "#The defects found on "+POSCAR+" were \n"
-    file.write(line)
-    file.write("atoms = [".rstrip("\n"))
-    file.write(str(atoms[0]).rstrip("\n"))
+    f.write(line)
+    f.write("atoms = [".rstrip("\n"))
+    f.write(str(atoms[0]).rstrip("\n"))
     for i in atoms[1:]:
-        file.write(",".rstrip("\n"))
-        file.write(str(i).rstrip("\n"))
-    file.write("] \n")
+        f.write(",".rstrip("\n"))
+        f.write(str(i).rstrip("\n"))
+    f.write("] \n")
 
 
     asked_orb = []
     #Picking and writing Orbitals
     for i in orbitals:
         asked_orb += ORB_Dict[i]
-    file.write("#Orbitals used for this plot\n")
-    file.write("orbitals = [".rstrip("\n"))
-    file.write(str(asked_orb[0]).rstrip("\n"))
+    f.write("#Orbitals used for this plot\n")
+    f.write("orbitals = [".rstrip("\n"))
+    f.write(str(asked_orb[0]).rstrip("\n"))
     if(asked_orb[1:]):
         for i in asked_orb[1:]:
-            file.write(",".rstrip("\n"))
-            file.write(str(i).rstrip("\n"))
-    file.write("] \n")
+            f.write(",".rstrip("\n"))
+            f.write(str(i).rstrip("\n"))
+    f.write("] \n")
 
     #Checking OUTCAR for SPIN and Kpoint information
     out = open("OUTCAR" ,"r")
@@ -76,27 +82,28 @@ def plot(orbitals, POSCAR = "POSCAR", PROCAR = "PROCAR",OUTCAR = "OUTCAR", savef
         KPOINTS = int([x for x in match_KPOINTS if(x)][0][0])
         ISPIN = int([x for x in match_SPIN if(x)][0][0])
         if(ISPIN == 2):
-            file.write("cmap = 'seismic'\n")
-            file.write("vmax = 1.0\n")
-            file.write("vmin = -1.0\n")
+            f.write("cmap = 'seismic'\n")
+            f.write("vmax = 1.0\n")
+            f.write("vmin = -1.0\n")
         else:
-            file.write("cmap = 'jet'\n")
-            file.write("vmax = None\n")
-            file.write("vmin = None\n")            
+            f.write("cmap = 'jet'\n")
+            f.write("vmax = None\n")
+            f.write("vmin = None\n")            
         if(KPOINTS != 1):
-            file.write("mode = 'parametric'\n")
+            f.write("mode = 'parametric'\n")
         else:
-            file.write("mode = 'atomic'\n")
+            f.write("mode = 'atomic'\n")
     else:
         print("Couldn't find OUTCAR file, assuming default mode and cmap")
-        file.write("cmap = 'jet'\n")
-        file.write("mode = 'parametric'\n")
+        f.write("cmap = 'jet'\n")
+        f.write("mode = 'parametric'\n")
 
-    file.write("#We then plot the bands specified \n")
-    file.write("pyprocar.bandsplot(PROCAR,outcar = OUTCAR,elimit = elimit,mode = mode,savefig = savefigure,atoms = atoms,orbitals = orbitals, cmap = cmap, vmax = vmax, vmin = vmin)")
-    file.close()
+    f.write("#We then plot the bands specified \n")
+    f.write("pyprocar.bandsplot(PROCAR,outcar = OUTCAR,elimit = elimit,mode = mode,savefig = savefigure,atoms = atoms,orbitals = orbitals, cmap = cmap, vmax = vmax, vmin = vmin)")
+    f.write('\n')
+    f.close()
     os.system("chmod +rwx plot_file.py") 
     #pyprocar.bandsplot(PROCAR,outcar = outcar, elimit = elimit, mode = mode_,savefig = savefigure ,atoms = atoms, orbitals = asked_orb)
 
 if __name__ == '__main__':
-    plot(orbitals='s', POSCAR='POSCAR')
+    plot()
