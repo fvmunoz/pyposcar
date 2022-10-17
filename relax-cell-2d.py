@@ -81,7 +81,11 @@ def get_data():
 
 def make_prediction(opt_type, history, maxStep=0.01):
   """
- `history` is an array with the form:
+  `opt_type`: a dict of the form
+  {'a':Bool, 'b':Bool, 'ab':Bool, 'theta':Bool}
+  where Bool={True, False}. It indicates what is going to be optimized
+
+  `history` is an array with the form:
   [[lat_a lat_b angle_ab energy stress_a stress_b stress_theta],
    [...],
    [...]]
@@ -90,8 +94,46 @@ def make_prediction(opt_type, history, maxStep=0.01):
 
   """
   print('\n\nStarting prediction:\n')
-  
+  # preparing a lookup table to iterate easily
+  stress = {'a':history[:,4],
+            'b':history[:,5],
+            'theta':history[:,6]}
+  stress['ab'] = (stress['a'] + stress['b'])/2
+  # a dict with the factors to be changed
+  factors = {'a':1, 'b':1, 'ab':1, 'theta':1}
+  # with one or two data points, there is nothing to interpolate. Just
+  # moving a little bit from the lowest energy point
+  if len(history) < 3:
+    for opt_t in ['a', 'b', 'ab', 'theta']:
+      if opt_type[opt_t]:
+        print('Dealing with the following type of stress:', opt_t)
+        energies = history[:,3]
+        i_min = np.argmin(energies)
+        stress_i_min = stress[opt_t][i_min]
+        print('minimum Energy iteration', i_min, ', stress', stress_i_min)
+        if stress_i_min < 0:
+          factors[opt_t] = 1 - maxStep
+        else:
+          factors[opt_t] = 1 + maxStep
+  # if I have enough data, they will be fitted together
+  else:
+    if opt_type['ab'] == True and opt_type['theta'] == False:
+      pass
+    else:
+      raise RuntimeError('Not implemented')
+    
+  if factors['ab'] != 1:
+    factors['a'] = factors['ab']
+    factors['b'] = factors['ab']
+  factor = [factors['a'], factors['b'], 1.0]
+  print('new factors', factors['a'], factors['b'])
 
+  p = poscar.Poscar('POSCAR')
+  p.parse()
+  new_p = poscarUtils.poscar_modify(p)
+  new_p.scale_lattice(factor, cartesian=False)
+  new_p.write('POSCAR-NEW')
+          
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='A lattice optimizer for a 2D'
                                     ' lattice. It will look to the old data and'
@@ -124,13 +166,8 @@ if __name__ == '__main__':
     opt_type['a'] = opt_type['b'] = False
     opt_type['ab'] = True
   
-  data = get_data(opt_type=opt_type)
-  history = data['history']
-  stress = {'a':data['stress_A'],
-            'b':data['stress_B'],
-            'ab':data['stress_theta'],
-            'theta':data['stress_theta']}
-  make_prediction(opt_type=opt_type, history=history, stress=stress)
+  history = get_data()
+  make_prediction(opt_type=opt_type, history=history)
   
   
   # I will create a list with results
