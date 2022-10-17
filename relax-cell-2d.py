@@ -7,7 +7,7 @@ import argparse
 import re
 import numpy as np
 
-def get_data(opt_type={'a':False, 'b':False, 'ab':True, 'theta':False}):
+def get_data():
   """Getting the information from two sources:
   1) The 'OPT_SUM' file, if it exists it has the energies and lattice
   data of previous iterations
@@ -16,11 +16,10 @@ def get_data(opt_type={'a':False, 'b':False, 'ab':True, 'theta':False}):
   is no enough data to fit a parabola
   
   The OPT_SUM file will be updated (and created if needed).
+  This file contains:
 
-  args:
-
-  `opt_type` what is going to be optimized
-
+  lat_a lat_b angle_ab energy stress_a stress_b stress_theta
+  
   """
 
   if not os.path.isfile('OUTCAR'):
@@ -34,6 +33,7 @@ def get_data(opt_type={'a':False, 'b':False, 'ab':True, 'theta':False}):
   stress = stress[-1].split()
   stress_A = float(stress[1])
   stress_B = float(stress[2])
+  stress_AB = (stress_A + stress_B)/2
   stress_theta = float(stress[4])
   print('stress A,', stress_A)
   print('stress B,', stress_B)
@@ -53,18 +53,16 @@ def get_data(opt_type={'a':False, 'b':False, 'ab':True, 'theta':False}):
   print('angle AB', angle_ab*180/np.pi, '(deg)', ', ', angle_ab, ' (rad)')
   
   
-  # updating and prehaps creating a file with energies
+  # updating and perhaps creating a file with energies
   line = ''
-  if opt_type['a']:
-    line += str(length_a) + ' '
-  if opt_type['b']: 
-    line += str(length_b) + ' '
-  if opt_type['ab']:
-    length_ab = (length_a + length_b)/2
-    line += str(length_ab) + ' '
-  if opt_type['theta']:
-    line += str(angle_ab) + ' '
-  line += str(energy) + '\n'
+  line += str(length_a) + ' '
+  line += str(length_b) + ' '
+  line += str(angle_ab) + ' '
+  line += str(energy) + ' '
+  line += str(stress_A) + ' '
+  line += str(stress_B) + ' '
+  line += str(stress_theta) + '\n'
+  
   print('New line to OPT_SUM\n',line)
   f_histo = open('OPT_SUM', 'a')
   f_histo.write(line)
@@ -79,92 +77,19 @@ def get_data(opt_type={'a':False, 'b':False, 'ab':True, 'theta':False}):
   print(history)
 
   # passing the relevant info:
-  # (full) history
-  # stress.
-  data = {}
-  data['history'] = history
-  data['stress_A'] = stress_A
-  data['stress_B'] = stress_B
-  data['stress_theta'] = stress_theta
+  return history
 
-  return data
-
-def make_prediction(opt_type, history, stress, maxStep=0.01):
+def make_prediction(opt_type, history, maxStep=0.01):
   """
- `history` is ordered, but it only includes the data when they exist.
-  The order is 'a', 'b', 'ab', 'theta' 
-  These are the valid fileds for `stress` too.
+ `history` is an array with the form:
+  [[lat_a lat_b angle_ab energy stress_a stress_b stress_theta],
+   [...],
+   [...]]
   
   maxStep: relative maximum change, 0.01 is 1%
 
   """
   print('\n\nStarting prediction:\n')
-  # index of current item (field)
-  cur_index = 0
-  # number of inequivalent data of each item (field)
-  nvalues = []
-  # I need at least three different values per parameter
-  if opt_type['a']:
-    values = set(history[:,cur_index])
-    print('values of `a`', values)
-    nvalues.append(len(values))
-    cur_index += 1
-  if opt_type['b']:
-    values = set(history[:,cur_index])
-    print('values of `b`', values)
-    nvalues.append(len(values))
-    cur_index += 1
-  if opt_type['ab']:
-    values = set(history[:,cur_index])
-    print('values of `ab`', values)
-    nvalues.append(len(values))
-    cur_index += 1
-  if opt_type['theta']:
-    values = set(history[:,cur_index])
-    print('values of `theta`', values)
-    nvalues.append(len(values))
-    cur_index += 1
-
-  # if across the least represented paramenter I only have one value,
-  # the only option is to do a initial guess, based on the stress.
-  #
-  # if there are two different data, I could take the value at the
-  # middle point
-  #
-  # With three or more data, I could fit a curve, eventually excluding
-  # far away (initial) points
-
-  p = poscar.Poscar('POSCAR')
-  p.parse()
-  new_p = poscarUtils.poscar_modify(p)
-
-  factor_a = factor_b = factor_theta = 1.0
-  if min(nvalues) == 1:
-    if opt_type['a']:
-      if stress['a'] > 0:
-        factor_a = 1 + maxStep/3
-      else:
-        factor_a = 1 - maxStep/3
-    if opt_type['b']:
-      if stress['b'] > 0:
-        factor_b = 1 + maxStep/3
-      else:
-        factor_b = 1 - maxStep/3
-    if opt_type['ab']:
-      if stress['ab'] > 0:
-        factor_a = factor_b = 1 + maxStep/3
-      else:
-        factor_a = factor_b = 1 - maxStep/3
-    if opt_type['theta']:
-      if stress['theta'] > 0:
-        factor_theta = 1 + maxStep/3
-      else:
-        factor_theta = 1 - maxStep/3
-  print('scaling in a, b, theta: ',factor_a, factor_b, factor_theta)
-    
-
-
-
   
 
 if __name__ == '__main__':
