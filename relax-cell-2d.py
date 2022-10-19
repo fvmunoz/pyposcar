@@ -8,7 +8,7 @@ import re
 import numpy as np
 import sys
 
-def get_data():
+def get_data(old=12, max_iterations=100):
   """Getting the information from two sources:
   1) The 'OPT_SUM' file, if it exists it has the energies and lattice
   data of previous iterations
@@ -21,6 +21,9 @@ def get_data():
 
   lat_a lat_b angle_ab energy stress_a stress_b stress_theta
   
+  args:
+  `old`: discard history data older than this iteration
+  `max_iterations`: if reached the calculation stops
   """
 
   if not os.path.isfile('OUTCAR'):
@@ -71,10 +74,17 @@ def get_data():
 
   # reading the full history
   history = open('OPT_SUM', 'r').readlines()
+  print('number of history points', len(history))
+  if len(history) > max_iterations:
+    continue_loop(False)
+    raise RuntimeError('Maximum number of iteration reached')
+  if len(history) > old:
+    history = history[-old:]
+    print('Deleting old values from history')
   history = list(set(history))
   history = [x.split() for x in history]
   history = np.array(history, dtype=float)
-  print('Full history (excluding duplicate points)')
+  print('History (excluding duplicate points, unsorted)')
   print(history)
 
   # passing the relevant info:
@@ -164,7 +174,15 @@ def make_prediction_ab(history, tolerance=0.1, maxStep=0.01):
     min_energy = a*new_param_a**2 + b*new_param_a + c
     print('Fitting a parabola yield (param_a_min, E_min)', new_param_a, min_energy)
     if a<0:
-      raise RuntimeError('The parabola is inverted!')
+      print('\nThe parabola is inverted!\n, falling back to a simple prediction\n')
+      if s[i_min] < 0: # negative stress -> decrease the unit cell
+        new_param_a = param_a[i_min]*(1 - maxStep)
+        new_param_b = param_b[i_min]*(1 - maxStep)      
+      else:
+        new_param_a = param_a[i_min]*(1 + maxStep)
+        new_param_b = param_b[i_min]*(1 + maxStep)
+
+
     # if stress is negative param_a has to decrease
     if stress[i_min] < 0:
       # I will keep the smaller decrement (larger value) among the
@@ -240,6 +258,18 @@ def fit_parabola_1D(x,y):
   #print('fitting,', fit_params)
   return fit_params
 
+def continue_loop(value):
+  if value == True:
+    # convergence has NOT been achieved
+    open('RELAX-CONTINUE', 'a').close()
+  else:
+    try:
+      os.remove('RELAX-CONTINUE')
+    except FileNotFoundError:
+      pass
+
+    
+
 def fit_parabola_1D_close_min(x,y, max_data=6):
   """It fits a parabola with all the data, locates the minimum, and then
   it keeps up to `max_data` data points, discarding those farther from
@@ -281,13 +311,14 @@ if __name__ == '__main__':
                       'ratio)?, the angle `theta`?, or both `a_and_b` (varied '
                       'independently)', choices=['a','b', 'ab', 'theta'],
                       default='ab')
-  parser.add_argument('--equal', '-e', help='if optimizing `ab`, it keeps the '
-                      'ratio between both lattice parameters constant (i.e. '
-                      'there is only one parameter to optimize)', action='store_true')
   parser.add_argument('-tolerance', '-t', type=float, help='maximum stress allowed'
                       ' (absolute value, in eV/A)', default=0.1)
   parser.add_argument('-s', '--script', action='store_true', help='It creates a '
                       'sample snippet of a script to run the relaxation. Then quit')
+  parser.add_argument('-o', '--discard_old', default=12, help='Discard data older'
+                      ' than this value, in iterations')
+  parser.add_argument('-m', '--max_iterations', default=100, help='Max number of'
+                      ' iterations, before failing')
   args = parser.parse_args()
 
   if args.script:
@@ -304,6 +335,7 @@ if __name__ == '__main__':
     # while RELAX-CONTINUE exists iterate
     string += 'while [ -f RELAX-CONTINUE ]\n'
     string += 'do\n'
+    string += '    rm RELAX-CONTINUE\n' # just in case, I don't want to iterate forever
     string += '    cp POSCAR-NEW POSCAR\n'
     string += '    $VASPCOMMAND\n'
     string += '    $RELAXCOMMAND\n'
@@ -314,7 +346,7 @@ if __name__ == '__main__':
     f.close()
     sys.exit()
   
-  history = get_data()
+  history = get_data(old=args.discard_old, max_iterations=args.max_iterations)
   if args.constrain == 'a':
     prediction = make_prediction_a(history, args.tolerance)
   if args.constrain == 'b':
@@ -326,16 +358,6 @@ if __name__ == '__main__':
   if args.constrain == 'theta':
     prediction = make_prediction_theta(history, args.tolerance)
 
-  if prediction == True:
-    # convergence has NOT been achieved
-    open('RELAX-CONTINUE', 'a').close()
-  else:
-    try:
-      os.remove('RELAX-CONTINUE')
-    except FileNotFoundError:
-      pass
-      
-  
-  # I will create a list with results
+  continue_loop(prediction)
   
 
