@@ -175,7 +175,7 @@ def make_prediction_ab(history, tolerance=0.1, maxStep=0.01):
     print('Fitting a parabola yield (param_a_min, E_min)', new_param_a, min_energy)
     if a<0:
       print('\nThe parabola is inverted!\n, falling back to a simple prediction\n')
-      if s[i_min] < 0: # negative stress -> decrease the unit cell
+      if stress[i_min] < 0: # negative stress -> decrease the unit cell
         new_param_a = param_a[i_min]*(1 - maxStep)
         new_param_b = param_b[i_min]*(1 - maxStep)      
       else:
