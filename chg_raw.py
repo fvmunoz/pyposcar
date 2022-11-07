@@ -437,6 +437,26 @@ class Chg:
     p3d = plot3d.data3D(data=self.chg.Data0, lattice=self.chg.poscar.lat, verbose='debug')
     p3d.cut_plane(axis=np.array([0.0, 0.0, 1.0]), value=10)
     pass
+  
+  def average(self, axis):
+    data = self.chg.Data0
+    if axis == 'c':
+      data = np.average(data, axis=2)
+      data = np.average(data, axis=1)
+      length = np.linalg.norm(self.chg.poscar.lat[2])
+    if axis == 'b':
+      data = np.average(data, axis=2)
+      data = np.average(data, axis=0)
+      length = np.linalg.norm(self.chg.poscar.lat[1])
+    if axis == 'a':
+      data = np.average(data, axis=1)
+      data = np.average(data, axis=0)
+      length = np.linalg.norm(self.chg.poscar.lat[0])
+    print('Averaged Data shape, ', data.shape)
+    x = np.linspace(0, length, len(data))
+    plt.plot(x, data)
+    plt.show()
+    
     
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -454,7 +474,8 @@ if __name__ == "__main__":
 
   parser.add_argument('--new', action='store_true', help='usage of new, not fully'
                       ' tested methods')
-
+  parser.add_argument('-p', '--average', action='store_true', help='averages the '
+                      'potential (or charge) along a given axis')
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-l', '--direct_level', type=float,
                       help='level to plot, in direct coords')
@@ -488,6 +509,8 @@ if __name__ == "__main__":
     fig = chg.Zplot(cart_level=args.cartesian_level, direct_level=args.direct_level)
   elif args.new:
     chg.plot_cut_new(value=args.direct_level, axis=args.axis)
+  elif args.average:
+    chg.average(axis=args.axis)
   else:
     fig = chg.CutPlot(cart_level=args.cartesian_level,
                       direct_level=args.direct_level,
