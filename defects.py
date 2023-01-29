@@ -11,7 +11,7 @@ import latticeUtils
 import poscarUtils
 import copy
 import generalUtils
-
+import itertools
 import numpy as np
 try:
   from sklearn.neighbors.kde import KernelDensity
@@ -33,10 +33,104 @@ class FindDefect:
     self.defects = {} # all the defects from the different methods
                       # should be here. It is a dictionary of lists
     self.all_defects = [] # a simple list with all the defects found
+    self.nn_elem = [] #a descriptive list of all nearest neighbors clusters
     self.neighbors = latticeUtils.Neighbors(self.p, verbose=False)
     self.find_forgein_atoms()
     self.nearest_neighbors_environment()
+    
+    self.local_geometry()
     return
+  def local_geometry(self):
+    #print("Defects", self.defects)
+    #print("Defects", self.defects['find_forgein_atoms'])
+    #print("Defects", self.defects['nearest_neighbors_environment'])
+    #From all the atoms that aren't defects (Have to take them out)
+    #Should i take out its neighbors as well? 
+    #Compare same cluster types
+    #Compare same distances, have to "count" them "C_1-C_2" w "C_1-C_2" not "C_1-C_3"
+    defects = self.defects['find_forgein_atoms']
+    defects.sort(reverse = True)
+    Cluster_types = self.nn_elem
+    Neighbor_Class_elements = self.neighbors.nn_list
+    D_Matrix = self.neighbors.distances
+    #We get rid of defects already found
+    for i in defects:
+      Cluster_types.pop(i)
+      Neighbor_Class_elements.pop(i)
+    Total_ClusterDistanceMatrix = []
+    #Creates distances Matrix, with each atom and its distances
+    #Using the order [(a,a)(a,b)(a,c)],[(b,a),(b,b),(b,c)...] all sorted (so that (a,a) and (b,b) are always the first entries)
+    #This should count all distances inside the clusters in the same order
+    for atom in Neighbor_Class_elements:
+      index = atom
+      all_index = list(itertools.product(index,index))
+      grouped_index = []
+      group = []
+      counter = 0
+      #Grouping indexes like "[(a,a), (a,b), (a,c)...][(b,a),(b,b),(b,c),...]""
+      for value in all_index:
+        if(value[0] == index[counter]):
+          group.append(value)
+        else:
+          grouped_index.append(group)
+          group = []
+          group.append(value)
+          counter += 1
+      grouped_index.append(group)
+      ClusterDistanceMatrix = []
+      #Takes the sorted distances
+      for distance in grouped_index:
+        Cluster = [D_Matrix[x] for x in distance]
+        Cluster.sort()
+        ClusterDistanceMatrix.append(Cluster) 
+      Total_ClusterDistanceMatrix.append(ClusterDistanceMatrix)
+    #Now I need to compare these distances accordingly 
+    #Comparing each cluster type with itself
+    print("Cluster types ", self.nn_elem)
+    Cluster_set = list(set(self.nn_elem))
+    print("Cluster set ", Cluster_set)
+    Cluster_group_index = []
+    for group in Cluster_set:
+      indexes = []
+      for idx, cluster in enumerate(self.nn_elem):
+        if(cluster == group):
+          indexes.append(idx)
+      Cluster_group_index.append(indexes)
+    print("Group Cluster Indexes ", Cluster_group_index)
+    #Comparing
+    #I want to use a delta matrix which cointains all distance matrix differences
+    #Do some "Machine Learning" with this delta matrix and get a common value for each type of cluster
+    #Use this metric to decide if a geometrical defect exists
+    Geom_defects = {}
+    Total_ClusterDistanceMatrix = np.array(Total_ClusterDistanceMatrix)
+    #Here will be all norms 
+    Delta_General_Norms = []
+    #Here will be all norms separated by type of cluster
+    All_type_norms = []
+    print("Cluster_total ", Total_ClusterDistanceMatrix)
+    for type, idxs in zip(Cluster_set, Cluster_group_index):
+      Delta_type_Norms = []
+      idx_to_compare = itertools.combinations(idxs, 2)
+      for i,j in idx_to_compare:
+        delta = Total_ClusterDistanceMatrix[i] - Total_ClusterDistanceMatrix[j]
+        delta_norm = np.linalg.norm(delta)
+        Delta_type_Norms.append(delta_norm)
+        Delta_General_Norms.append(delta_norm)
+        
+        if(delta_norm > 0.1):
+          print("Geometrical Defect Found")
+      All_type_norms.append((type,Delta_type_Norms))
+    #print("All norms", All_type_norms)
+    #print("Neighbor Class element ", self.neighbors.nn_list)
+    #print("Distance Matrix ", self.neighbors.distances)
+
+
+
+    
+
+    
+    
+  
 
   def _set_all_defects(self):
       """
@@ -126,7 +220,7 @@ class FindDefect:
 
     The enviornment of each atom (i.e. the number and type of
     elements) are compared, and those statiscally different from the
-    rest are dibbed as defects.
+    rest are dubbed as defects.
 
     A good nearest neighbors list is a must for this method.
 
@@ -142,8 +236,12 @@ class FindDefect:
     # that the atom at which its environment is being proccesed also
     # matters. And it can be distinguihed from its environment (no
     # sorting)
-    nn_elem = [x[0]+x[1] for x in zip(self.p.elm, nn_elem)]
     
+    
+    #I need to save this as a class var
+    #For cluster comparison
+    nn_elem = [x[0]+x[1] for x in zip(self.p.elm, nn_elem)]
+    self.nn_elem = nn_elem
     # counting the frequency of unique elements
     from collections import Counter
     uniques = Counter(nn_elem)
