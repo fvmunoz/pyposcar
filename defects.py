@@ -113,13 +113,41 @@ class FindDefect:
       idx_to_compare = itertools.combinations(idxs, 2)
       for i,j in idx_to_compare:
         delta = Total_ClusterDistanceMatrix[i] - Total_ClusterDistanceMatrix[j]
+        #Maybe better to use the norm of this matrix than the whole matrix 
         delta_norm = np.linalg.norm(delta)
         Delta_type_Norms.append(delta_norm)
         Delta_General_Norms.append(delta_norm)
         
         if(delta_norm > 0.1):
           print("Geometrical Defect Found")
-      All_type_norms.append((type,Delta_type_Norms))
+      
+      All_type_norms.append([type,Delta_type_Norms])
+    
+    for type, norm in All_type_norms:
+      if len(norm) == 1:
+        continue
+      #May need to add more exceptions when a certain type of Cluster is found in low amounts
+      #Might consider just evoiding Cluster types that include defect atoms even if its not the center atom
+      norm_array = np.array(norm)
+      norm_ml = norm_array.reshape(-1,1)
+      kde = KernelDensity(kernel='gaussian',bandwidth=3).fit(norm_ml)
+      #Dont remember the idea of Delta in last implementation
+      delta = 10
+      samples = np.linspace(np.min(norm_array), np.max(norm_array))
+      scores = kde.score_samples(samples.reshape(-1,1))
+      samples, scores = generalUtils.remove_flat_points(samples, scores)
+      maxima = argrelextrema(scores, np.greater)[0]
+      print("Cluster Tipo ", type)
+      print("Promedio" , np.average(norm_array))
+      print("Desviación estandar", np.std(norm_array))
+      print("Max", np.max(norm_array))
+      print("Promedio metodo con KDE", samples[maxima])
+      plt.plot(samples,scores)
+      plt.show()
+      
+
+      
+
     #print("All norms", All_type_norms)
     #print("Neighbor Class element ", self.neighbors.nn_list)
     #print("Distance Matrix ", self.neighbors.distances)
