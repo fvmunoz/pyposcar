@@ -37,9 +37,11 @@ class FindDefect:
     self.neighbors = latticeUtils.Neighbors(self.p, verbose=False)
     self.find_forgein_atoms()
     self.nearest_neighbors_environment()
-    
-    self.local_geometry()
+
+    ## Work in progress
+    #self.local_geometry()
     return
+  
   def local_geometry(self):
     #print("Defects", self.defects)
     #print("Defects", self.defects['find_forgein_atoms'])
@@ -132,16 +134,17 @@ class FindDefect:
       norm_ml = norm_array.reshape(-1,1)
       kde = KernelDensity(kernel='gaussian',bandwidth=3).fit(norm_ml)
       #Dont remember the idea of Delta in last implementation
-      delta = 10
-      samples = np.linspace(np.min(norm_array), np.max(norm_array))
+      samples = np.linspace(np.min(norm_array)*0.9, np.max(norm_array)*1.1)
       scores = kde.score_samples(samples.reshape(-1,1))
       samples, scores = generalUtils.remove_flat_points(samples, scores)
       maxima = argrelextrema(scores, np.greater)[0]
+      minima = argrelextrema(scores, np.less)[0]
       print("Cluster Tipo ", type)
       print("Promedio" , np.average(norm_array))
       print("Desviación estandar", np.std(norm_array))
       print("Max", np.max(norm_array))
       print("Promedio metodo con KDE", samples[maxima])
+      print("Minimo KDE", samples[minima])
       plt.plot(samples,scores)
       plt.show()
       
